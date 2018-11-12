@@ -21,7 +21,7 @@
 
 #include <stdint.h>
 
-uint32_t parse_uint32(uint8_t *s);
-uint32_t parse_set_value(uint8_t *s);
+uint32_t parse_uint32(const char *s);
+uint32_t parse_set_value(const char *s);
 
 #endif

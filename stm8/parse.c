@@ -25,7 +25,7 @@
 #undef USE_MILLI
 
 #ifdef USE_MILLI
-uint32_t _parse_num(uint8_t *s, uint8_t **stop, uint8_t *digits_seen)
+uint32_t _parse_num(char *s, char **stop, char *digits_seen)
 {
 	uint8_t digit;
 	uint32_t num = 0;
@@ -43,10 +43,10 @@ uint32_t _parse_num(uint8_t *s, uint8_t **stop, uint8_t *digits_seen)
 	return num;
 }
 
-uint32_t parse_millinum(uint8_t *s)
+uint32_t parse_millinum(const char *s)
 {
-	uint8_t *t = s;
-	uint8_t *stop;
+	char *t = s;
+	char *stop;
 	uint32_t fraction_digits = 0;
 	uint32_t whole_digits = 0;
 	uint8_t digits_seen;
@@ -83,7 +83,7 @@ invalid_number:
 }
 #endif
 
-uint32_t parse_uint32(uint8_t *s)
+uint32_t parse_uint32(const char *s)
 {
 	uint32_t val = 0;
 
@@ -99,7 +99,7 @@ uint32_t parse_uint32(uint8_t *s)
 	return val;
 }
 
-uint32_t parse_set_value(uint8_t *s)
+uint32_t parse_set_value(const char *s)
 {
 #ifdef USE_MILLI
 	return parse_millinum(s);
