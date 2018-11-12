@@ -39,7 +39,7 @@ void fsm_event_update(fsm_event_t *evt, button_t button, cfg_system_t *sys)
 	evt->st.is_output = sys->output;
 }
 
-void change_control(fsm_event_t *event, void(*set)(uint8_t*,uint16_t), uint16_t val, uint8_t reset)
+void change_control(fsm_event_t *event, bool(*set)(uint16_t), uint16_t val, uint8_t reset)
 {
 	static uint16_t count = 0;
 	uint8_t increment = 10;
@@ -63,7 +63,7 @@ void change_control(fsm_event_t *event, void(*set)(uint8_t*,uint16_t), uint16_t 
 	if (event->st.is_button_up) val += increment;
 	if (event->st.is_button_down) val -= increment;
 
-	(*set)(NULL, val);
+	(*set)(val);
 }
 
 void process_fsm(button_t button, cfg_system_t *sys, cfg_output_t *cfg, state_t *stt) 
@@ -180,7 +180,7 @@ void process_fsm(button_t button, cfg_system_t *sys, cfg_output_t *cfg, state_t 
 			display_save((Fsm_state == Fsm_state_chain) ? UPDATE_SLOW : UPDATE_FAST);
 			break;
 		case FSM_SAVE_CFG:
-			uart_write_str((config_save_output(cfg) == 0) ? "ERROR SAVING\r\n" : "SAVED\r\n");
+			uart_write_str((config_save_output(cfg) == 0) ? "E!\r\n" : "OK\r\n");
 			break;
 	}
 }
