@@ -24,8 +24,8 @@
 
 typedef struct {
 	uint8_t version;
-	uint16_t vset; // mV
-	uint16_t cset; // mA
+	uint16_t vset; // mV  -  value from 'VOLTAGE' command
+	uint16_t cset; // mA  -  value from 'CURRENT' command
 } cfg_output_t;
 
 // These parameters correspond to the linear formula:
