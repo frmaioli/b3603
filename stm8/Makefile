@@ -12,12 +12,7 @@ test: $(TESTUTILS)
 -include $(DEP)
 
 check_size: b3603.ihx
-		@CODESIZE=$$(echo $$(($$(grep '^HOME' b3603.map |head -n1 | sed -e 's/^.*=\s*\([0-9]\+\).*$$/\1/')+\
-			$$(grep '^GSINIT' b3603.map |head -n1 | sed -e 's/^.*=\s*\([0-9]\+\).*$$/\1/')+ \
-			$$(grep '^GSFINAL' b3603.map |head -n1 | sed -e 's/^.*=\s*\([0-9]\+\).*$$/\1/')+ \
-			$$(grep '^CODE' b3603.map |head -n1 | sed -e 's/^.*=\s*\([0-9]\+\).*$$/\1/')+ \
-			$$(grep '^CONST' b3603.map |head -n1 | sed -e 's/^.*=\s*\([0-9]\+\).*$$/\1/')+ \
-			$$(grep '^INITIALIZER' b3603.map |head -n1 | sed -e 's/^.*=\s*\([0-9]\+\).*$$/\1/')))); \
+	@CODESIZE=$$(perl -ne 'if (/^(HOME|GSINIT|GSFINAL|CODE|CONST|INITIALIZER)\s+\w+\s+(\w+)/) { $$c{$$1} ||= hex($$2) } END { $$sum += $$_ for values %c; print $$sum; }' b3603.map); \
 			 if [ "$$CODESIZE" -gt 8192 ]; then echo "Code is too large, it is $$CODESIZE bytes"; exit 1; \
 			 else echo "Code fits the flash, it is $$CODESIZE"; \
 			 fi
