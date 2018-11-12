@@ -15,10 +15,13 @@
  *  You should have received a copy of the GNU General Public License
  *  along with B3603 alternative firmware.  If not, see <http://www.gnu.org/licenses/>.
  */
+#define DETAILED_HELP 1
+#define VERBOSECAL 1
 
 #include "stm8s.h"
 #include <string.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <ctype.h>
 
 #include "main.h"
@@ -54,21 +57,56 @@ void commit_output()
 	output_commit(&cfg_output, &cfg_system, state.constant_current);
 }
 
-void set_name(uint8_t *name)
+#ifdef VERBOSECAL
+#define OPTIONALARG(msg)  , msg
+#else
+#define OPTIONALARG(msg)
+#endif
+
+
+void write_calibration(calibrate_t *val  OPTIONALARG(const char *tag))
 {
-	uint8_t idx;
+    uart_write_fixed_point(val->a);
+    uart_write_ch('/');
+    uart_write_fixed_point(val->b);
+    uart_write_ch(' ');
+    uart_write_ch(' ');
+    uart_write_int32(val->a);
+    uart_write_ch('/');
+    uart_write_int32(val->b);
+#ifdef VERBOSECAL
+    if (tag) {
+        uart_write_ch(' ');
+        uart_write_str(tag);
+    }
+#endif
+    uart_write_str("\r\n");
+}
 
-	for (idx = 0; name[idx] != 0; idx++) {
-		if (!isprint(name[idx]))
-			name[idx] = '.'; // Eliminate non-printable chars
+bool handle_set_name(const char *name)
+{
+    uint8_t *dst = cfg_system.name;
+    uint8_t *enddst = cfg_system.name+sizeof(cfg_system.name);
+	while (dst < enddst) {
+        if (*name==0)
+            break;
+		if (!isprint(*name))
+			*dst = '.'; // Eliminate non-printable chars
+        else
+            *dst = *name;
+        dst++;
+        name++;
 	}
+	while (dst < enddst)
+        *dst++ = 0;
 
-	memcpy(cfg_system.name, name, sizeof(cfg_system.name));
-	cfg_system.name[sizeof(cfg_system.name)-1] = 0;
+	enddst[-1] = 0;
 
 	uart_write_str("SNAME: ");
-	uart_write_str(cfg_system.name);
+	uart_write_str((const char*)cfg_system.name);
 	uart_write_str("\r\n");
+
+    return true;
 }
 
 void autocommit(void)
@@ -76,112 +114,122 @@ void autocommit(void)
 	if (cfg_system.autocommit) {
 		commit_output();
 	} else {
-		uart_write_str("AUTOCOMMIT OFF: CHANGE PENDING ON COMMIT\r\n");
+		uart_write_str("OFF\r\n");
 	}
 }
 
-void set_output(uint8_t *s)
+bool set_output(const char *s)
 {
 	if (s[1] != 0)
-		goto write_error;
+		return false;
 
 	if (s[0] == '0') {
 		cfg_system.output = 0;
-		uart_write_str("OUTPUT: OFF\r\n");
+#ifdef VERBOSE
+		uart_write_str("OFF\r\n");
+#endif
 	} else if (s[0] == '1') {
 		cfg_system.output = 1;
-		uart_write_str("OUTPUT: ON\r\n");
+#ifdef VERBOSE
+		uart_write_str("ON\r\n");
+#endif
 	} else {
-		goto write_error;
+        return false;
 	}
 
 	autocommit();
-	return;
-
-write_error:
-	uart_write_str("OUTPUT takes either 0 for OFF or 1 for ON, received: \"");
-	uart_write_str(s);
-	uart_write_str("\"\r\n");
+	return true;
 }
 
-void set_voltage(uint8_t *s, uint16_t voltage)
+
+// voltage in mV
+bool set_voltage(uint16_t voltage)
 {
-	fixed_t val = voltage;
+	uint16_t val = voltage;
 
-	if (val == 0) {
-		if (s == NULL) return;
-		val = parse_set_value(s);
-	}
 	if (val == 0xFFFF)
-		return;
+		return false;
 
-	if ((val > CAP_VMAX) || (val < CAP_VMIN)) {
-		uart_write_str("VOLTAGE OUT OF THE ALLOWED RANGE\r\n");
-		return;
+	if ((val > CAP_VMAX) || (val < CAP_VMIN)) {  // 10 .. 35000 mV
+		return false;
 	}
 
 	cfg_output.vset = val;
 	autocommit();
 
-	//Only writes the set in uart if the command came through uart (better performance)
-	if (s != NULL) {
-		uart_write_str("VOLTAGE: SET ");
-		uart_write_millivalue(cfg_output.vset);
-		uart_write_str("\r\n");
-	}
+	return true;
+}
+bool set_voltage_arg(const char *arg)
+{
+    if (arg == NULL) return;
+    return set_voltage(parse_set_value(arg));
 }
 
-void set_current(uint8_t *s, uint16_t current)
+
+/* current in mA */
+bool set_current(uint16_t current)
 {
-	fixed_t val = current;
+	uint16_t val = current;
 
-	if (val == 0) {
-		if (s == NULL) return;
-		val = parse_set_value(s);
-	}
 	if (val == 0xFFFF)
-		return;
+		return false;
 
-	if ((val > CAP_CMAX) || (val < CAP_CMIN)) {
-		uart_write_str("CURRENT OUT OF THE ALLOWED RANGE\r\n");
-		return;
+	if ((val > CAP_CMAX) || (val < CAP_CMIN)) {  // 1 .. 3000 mA
+		return false;
 	}
 
 	cfg_output.cset = val;
 	autocommit();
 
-	//Only writes the set in uart if the command came through uart (better performance)
-	if (s != NULL) {
-		uart_write_str("CURRENT: SET ");
-		uart_write_millivalue(cfg_output.cset);
-		uart_write_str("\r\n");
-	}
+	return true;
+}
+bool set_current_arg(const char *arg)
+{
+    if (arg == NULL) return;
+    return set_current(parse_set_value(arg));
 }
 
-void set_autocommit(uint8_t *s)
+bool set_autocommit(const char *arg)
 {
-	if (strcmp(s, "1") == 0 || strcmp(s, "YES") == 0) {
+	if (strcmp(arg, "1") == 0 || strcmp(arg, "YES") == 0) {
 		cfg_system.autocommit = 1;
-		uart_write_str("AUTOCOMMIT: YES\r\n");
-	} else if (strcmp(s, "0") == 0 || strcmp(s, "NO") == 0) {
+#ifdef VERBOSE
+		uart_write_str("YES\r\n");
+#endif
+        return true;
+	} else if (strcmp(arg, "0") == 0 || strcmp(arg, "NO") == 0) {
 		cfg_system.autocommit = 0;
-		uart_write_str("AUTOCOMMIT: NO\r\n");
+#ifdef VERBOSE
+		uart_write_str("NO\r\n");
+#endif
+        return true;
 	} else {
-		uart_write_str("UNKNOWN ARG. USE 1 or 0.\r\n");
+		return false;
 	}
 }
 
-void set_calibration(const char *name, uint32_t *pval, uint8_t *s)
+bool set_calibration(const char*cmd, const char *arg, calibrate_t*cal)
 {
-	uint32_t val = parse_uint32(s);
-	if (val == 0xFFFFFFFF) {
-		uart_write_str("FAILED TO PARSE");
-	} else {
-		*pval = val;
-		uart_write_str("CALIBRATION SET ");
-		uart_write_str(name);
-	}
-	uart_write_str("\r\n");
+    char *spc;
+    calibrate_t val;
+	val.a = parse_uint32(arg);
+	if (val.a == 0xFFFFFFFF) {
+        return false;
+    }
+
+    spc = strchr(arg, ' ');
+    if (spc==NULL) {
+        return false;
+    }
+    *spc = 0;
+	val.b = parse_uint32(spc+1);
+	if (val.b == 0xFFFFFFFF) {
+        return false;
+    }
+
+	cal->a = val.a;
+	cal->b = val.b;
+    return true;
 }
 
 void write_str(const char *prefix, const char *val)
@@ -202,6 +250,14 @@ void write_millivalue(const char *prefix, uint16_t millival)
 	uart_write_millivalue(millival);
 	uart_write_str("\r\n");
 }
+void write_raw_millivalue(const char *prefix, uint16_t millival, uint16_t rawval)
+{
+	uart_write_str(prefix);
+	uart_write_millivalue(millival);
+    uart_write_ch(' ');
+    uart_write_int(rawval);
+	uart_write_str("\r\n");
+}
 
 void write_int(const char *prefix, uint16_t val)
 {
@@ -210,170 +266,214 @@ void write_int(const char *prefix, uint16_t val)
 	uart_write_str("\r\n");
 }
 
+//  command handlers
+bool handle_system(const char *arg)
+{
+    uart_write_str("M: " MODEL "\r\n" "V: " FW_VERSION "\r\n");
+    write_str("N: ", (const char*)cfg_system.name);
+    write_onoff("O: ", cfg_system.default_on);
+    write_onoff("AC: ", cfg_system.autocommit);
+    return true;
+}
+bool handle_calibration_dump(const char *arg)
+{
+    write_calibration(&cfg_system.vin_adc  OPTIONALARG("VIN ADC"));
+    write_calibration(&cfg_system.vout_adc OPTIONALARG("VOUT ADC"));
+    write_calibration(&cfg_system.cout_adc OPTIONALARG("COUT ADC"));
+    write_calibration(&cfg_system.vout_pwm OPTIONALARG("VOUT PWM"));
+    write_calibration(&cfg_system.cout_pwm OPTIONALARG("COUT PWM"));
+    return true;
+}
+bool handle_limit_dump(const char *arg)
+{
+    write_millivalue("VMIN: ", CAP_VMIN);
+    write_millivalue("VMAX: ", CAP_VMAX);
+    write_millivalue("VSTEP:", CAP_VSTEP);
+    write_millivalue("CMIN: ", CAP_CMIN);
+    write_millivalue("CMAX: ", CAP_CMAX);
+    write_millivalue("CSTEP:", CAP_CSTEP);
+    return true;
+}
+bool handle_config_dump(const char *arg)
+{
+    write_onoff(     "OUTPUT: ", cfg_system.output);
+    write_millivalue("VSET: ", cfg_output.vset);
+    write_millivalue("CSET: ", cfg_output.cset);
+    return true;
+}
+bool handle_status_dump(const char *arg)
+{
+    write_onoff(         "OUTPUT: ", cfg_system.output);
+    write_raw_millivalue("VIN:  ", state.vin,  state.vin_raw );
+    write_raw_millivalue("VOUT: ", state.vout, state.vout_raw);
+    write_raw_millivalue("COUT: ", state.cout, state.cout_raw);
+    write_str(           "CONSTANT: ", state.constant_current ? "CURRENT" : "VOLTAGE");
+    return true;
+}
+bool handle_save(const char *arg)
+{
+    if (config_save_system(&cfg_system)==0)
+        return false;
+    else if (config_save_output(&cfg_output) == 0)
+        return false;
+    else
+        return true;
+}
+bool handle_load(const char *arg)
+{
+    config_load_system(&cfg_system);
+    config_load_output(&cfg_output);
+    autocommit();
+    return true;
+}
+bool handle_factory(const char *arg)
+{
+    config_default_system(&cfg_system);
+    config_default_output(&cfg_output);
+    autocommit();
+    return true;
+}
+#ifdef DEBUG
+bool handle_stuck(const char *arg)
+{
+    uart_write_str("STUCK\r\n");
+    uart_write_flush();
+    while(1); // Induce watchdog reset
+    return true;
+}
+#endif
+
+bool handle_commit_output(const char*arg)
+{
+    commit_output();
+    return true;
+}
+
+#ifdef DETAILED_HELP
+#define OPTIONAL(msg) msg
+#else
+#define OPTIONAL(msg)
+#endif
+struct command {
+    const char *command;
+    uint8_t commandsize;
+    bool (*handler)(const char *arg);
+#ifdef DETAILED_HELP
+    const char *helpmessage;
+#endif
+};
+
+bool handle_command_help(const char*arg);
+
+struct command commandhandlers[] = {
+    { "SYSTEM", 6, handle_system,  OPTIONAL("output version, model, name") },
+    { "CALIBRATION", 11, handle_calibration_dump, OPTIONAL("dump calibration data") },
+    { "LIMITS", 6, handle_limit_dump, OPTIONAL("dump system limits") },
+    { "CONFIG", 6, handle_config_dump, OPTIONAL("dump configuration") },
+    { "STATUS", 6, handle_status_dump, OPTIONAL("output current status") },
+    { "COMMIT", 6, handle_commit_output, OPTIONAL("commit configuration to output") },
+    { "SAVE", 4,   handle_save, OPTIONAL("save settings and config to flash") },
+    { "LOAD", 4,   handle_load, OPTIONAL("load settings and config from flash") },
+    { "FACTORY", 7, handle_factory, OPTIONAL("restore settings and config to factory defaults") },
+#if DEBUG
+    { "STUCK", 5,  handle_stuck, OPTIONAL("simulate problem for debugger") },
+#endif
+    { "SNAME", 5, handle_set_name, OPTIONAL("configure device name") },
+    { "OUTPUT", 6, set_output, OPTIONAL("turn output voltage on/off") },
+    { "VOLTAGE", 7, set_voltage_arg, OPTIONAL("set output voltage limit") },
+    { "CURRENT", 7, set_current_arg, OPTIONAL("set output current limit") },
+    { "AUTOCOMMIT", 10, set_autocommit, OPTIONAL("enable/disable auto commit") },
+    { "HELP", 10, handle_command_help },
+};
+
+
+struct calcommand {
+    const char *command;
+    uint8_t commandsize;
+    calibrate_t *value;
+#ifdef DETAILED_HELP
+    const char *helpmessage;
+#endif
+};
+
+
+struct calcommand calibrationhandlers[] = {
+    { "VINADC", 9, &cfg_system.vin_adc, OPTIONAL("configure Vin adc -> volt parameters") },
+    { "VOUTADC", 10, &cfg_system.vout_adc, OPTIONAL("configure Vout adc -> volt parameters") },
+    { "VOUTPWM", 10, &cfg_system.vout_pwm, OPTIONAL("configure Vout pwm -> volt parameters") },
+    { "COUTADC", 10, &cfg_system.cout_adc, OPTIONAL("configure Cout adc -> ampere parameters") },
+    { "COUTPWM", 10, &cfg_system.cout_pwm, OPTIONAL("configure Cout pwm -> ampere parameters") },
+};
+void delay(int n, int m)
+{
+    while (n--) {
+        for (int i=0 ; i < m ; i++)
+            __asm__("nop\n");
+		iwatchdog_tick();
+    }
+}
+bool handle_command_help(const char*arg)
+{
+    for (int i = 0 ; i < sizeof(commandhandlers)/sizeof(struct command) ; i++)
+    {
+        uart_write_str(commandhandlers[i].command);
+#ifdef DETAILED_HELP
+        uart_write_ch('\t');
+        uart_write_str(commandhandlers[i].helpmessage);
+#endif
+        uart_write_str("\r\n");
+
+        delay(10,1000);
+    }
+//  delay(500);
+    for (int i = 0 ; i < sizeof(calibrationhandlers)/sizeof(struct calcommand) ; i++)
+    {
+        uart_write_str("CAL_");
+        uart_write_str(calibrationhandlers[i].command);
+#ifdef DETAILED_HELP
+        uart_write_ch('\t');
+        uart_write_str(commandhandlers[i].helpmessage);
+#endif
+        uart_write_str("\r\n");
+        delay(10,1000);
+
+    }
+    return true;
+}
 void process_input()
 {
+    bool ok = false;
 	// Eliminate the CR/LF character
 	uart_read_buf[uart_read_len-1] = 0;
 
-//	if (strcmp(uart_read_buf, "MODEL") == 0) {
-//		uart_write_str("MODEL: " MODEL "\r\n");
-//	} else if (strcmp(uart_read_buf, "VERSION") == 0) {
-//		uart_write_str("VERSION: " FW_VERSION "\r\n");
-	if (strcmp(uart_read_buf, "SYSTEM") == 0) {
-		uart_write_str("MODEL: " MODEL "\r\n" "VERSION: " FW_VERSION "\r\n");
-		write_str("NAME: ", cfg_system.name);
-		write_onoff("ONSTARTUP: ", cfg_system.default_on);
-		write_onoff("AUTOCOMMIT: ", cfg_system.autocommit);
-	} else if (strcmp(uart_read_buf, "CALIBRATION") == 0) {
-	//	uart_write_str("CALIBRATE VIN ADC: ");
-		uart_write_fixed_point(cfg_system.vin_adc.a);
-		uart_write_ch('/');
-		uart_write_fixed_point(cfg_system.vin_adc.b);
-		uart_write_str("\r\n");
-	//	uart_write_str("CALIBRATE VOUT ADC: ");
-		uart_write_fixed_point(cfg_system.vout_adc.a);
-		uart_write_ch('/');
-		uart_write_fixed_point(cfg_system.vout_adc.b);
-		uart_write_str("\r\n");
-	//	uart_write_str("CALIBRATE COUT ADC: ");
-		uart_write_fixed_point(cfg_system.cout_adc.a);
-		uart_write_ch('/');
-		uart_write_fixed_point(cfg_system.cout_adc.b);
-		uart_write_str("\r\n");
-	//	uart_write_str("CALIBRATE VOUT PWM: ");
-		uart_write_fixed_point(cfg_system.vout_pwm.a);
-		uart_write_ch('/');
-		uart_write_fixed_point(cfg_system.vout_pwm.b);
-		uart_write_str("\r\n");
-	//	uart_write_str("CALIBRATE COUT PWM: ");
-		uart_write_fixed_point(cfg_system.cout_pwm.a);
-		uart_write_ch('/');
-		uart_write_fixed_point(cfg_system.cout_pwm.b);
-		uart_write_str("\r\n");
-/*	} else if (strcmp(uart_read_buf, "RCALIBRATION") == 0) {
-		uart_write_str("CALIBRATE VIN ADC: ");
-		uart_write_int32(cfg_system.vin_adc.a);
-		uart_write_ch('/');
-		uart_write_int32(cfg_system.vin_adc.b);
-		uart_write_str("\r\n");
-		uart_write_str("CALIBRATE VOUT ADC: ");
-		uart_write_int32(cfg_system.vout_adc.a);
-		uart_write_ch('/');
-		uart_write_int32(cfg_system.vout_adc.b);
-		uart_write_str("\r\n");
-		uart_write_str("CALIBRATE COUT ADC: ");
-		uart_write_int32(cfg_system.cout_adc.a);
-		uart_write_ch('/');
-		uart_write_int32(cfg_system.cout_adc.b);
-		uart_write_str("\r\n");
-		uart_write_str("CALIBRATE VOUT PWM: ");
-		uart_write_int32(cfg_system.vout_pwm.a);
-		uart_write_ch('/');
-		uart_write_int32(cfg_system.vout_pwm.b);
-		uart_write_str("\r\n");
-		uart_write_str("CALIBRATE COUT PWM: ");
-		uart_write_int32(cfg_system.cout_pwm.a);
-		uart_write_ch('/');
-		uart_write_int32(cfg_system.cout_pwm.b);
-		uart_write_str("\r\n");
-*/	} else if (strcmp(uart_read_buf, "LIMITS") == 0) {
-		uart_write_str("LIMITS:\r\n");
-		write_millivalue("VMIN: ", CAP_VMIN);
-		write_millivalue("VMAX: ", CAP_VMAX);
-		write_millivalue("VSTEP: ", CAP_VSTEP);
-		write_millivalue("CMIN: ", CAP_CMIN);
-		write_millivalue("CMAX: ", CAP_CMAX);
-		write_millivalue("CSTEP: ", CAP_CSTEP);
-	} else if (strcmp(uart_read_buf, "CONFIG") == 0) {
-		uart_write_str("CONFIG:\r\n");
-		write_onoff("OUTPUT: ", cfg_system.output);
-		write_millivalue("VSET: ", cfg_output.vset);
-		write_millivalue("CSET: ", cfg_output.cset);
-	} else if (strcmp(uart_read_buf, "STATUS") == 0) {
-		uart_write_str("STATUS:\r\n");
-		write_onoff("OUTPUT: ", cfg_system.output);
-		write_millivalue("VIN: ", state.vin);
-		write_millivalue("VOUT: ", state.vout);
-		write_millivalue("COUT: ", state.cout);
-		write_str("CONSTANT: ", state.constant_current ? "CURRENT" : "VOLTAGE");
-	} else if (strcmp(uart_read_buf, "RSTATUS") == 0) {
-		uart_write_str("RSTATUS:\r\n");
-		write_int("VIN ADC: ", state.vin_raw);
-		write_int("VOUT ADC: ", state.vout_raw);
-		write_int("COUT ADC: ", state.cout_raw);
-	} else if (strcmp(uart_read_buf, "COMMIT") == 0) {
-		commit_output();
-	} else if (strcmp(uart_read_buf, "SAVE") == 0) {
-		uart_write_str(((config_save_system(&cfg_system) == 0) ||
-				(config_save_output(&cfg_output) == 0)) ?
-				"ERROR SAVING\r\n" : "SAVED\r\n");
-	} else if (strcmp(uart_read_buf, "LOAD") == 0) {
-		config_load_system(&cfg_system);
-		config_load_output(&cfg_output);
-		autocommit();
-	} else if (strcmp(uart_read_buf, "RESTORE") == 0) {
-		config_default_system(&cfg_system);
-		config_default_output(&cfg_output);
-		autocommit();
-#if DEBUG
-	} else if (strcmp(uart_read_buf, "STUCK") == 0) {
-		// Allows debugging of the IWDG feature
-		uart_write_str("STUCK\r\n");
-		uart_write_flush();
-		while(1); // Induce watchdog reset
-#endif
-	} else {
-		// Process commands with arguments
-		uint8_t idx;
-		uint8_t space_found = 0;
-
-		for (idx = 0; idx < uart_read_len; idx++) {
-			if (uart_read_buf[idx] == ' ') {
-				uart_read_buf[idx] = 0;
-				space_found = 1;
-				break;
-			}
-		}
-
-		if (space_found) {
-			if (strcmp(uart_read_buf, "SNAME") == 0) {
-				set_name(uart_read_buf + idx + 1);
-			} else if (strcmp(uart_read_buf, "OUTPUT") == 0) {
-				set_output(uart_read_buf + idx + 1);
-			} else if (strcmp(uart_read_buf, "VOLTAGE") == 0) {
-				set_voltage(uart_read_buf + idx + 1, 0);
-			} else if (strcmp(uart_read_buf, "CURRENT") == 0) {
-				set_current(uart_read_buf + idx + 1, 0);
-			} else if (strcmp(uart_read_buf, "AUTOCOMMIT") == 0) {
-				set_autocommit(uart_read_buf + idx + 1);
-			} else if (strcmp(uart_read_buf, "CALVINADCA") == 0) {
-				set_calibration("VIN ADC A", &cfg_system.vin_adc.a, uart_read_buf+idx+1);
-			} else if (strcmp(uart_read_buf, "CALVINADCB") == 0) {
-				set_calibration("VIN ADC B", &cfg_system.vin_adc.b, uart_read_buf+idx+1);
-			} else if (strcmp(uart_read_buf, "CALVOUTADCA") == 0) {
-				set_calibration("VOUT ADC A", &cfg_system.vout_adc.a, uart_read_buf+idx+1);
-			} else if (strcmp(uart_read_buf, "CALVOUTADCB") == 0) {
-				set_calibration("VOUT ADC B", &cfg_system.vout_adc.b, uart_read_buf+idx+1);
-			} else if (strcmp(uart_read_buf, "CALVOUTPWMA") == 0) {
-				set_calibration("VOUT PWM A", &cfg_system.vout_pwm.a, uart_read_buf+idx+1);
-			} else if (strcmp(uart_read_buf, "CALVOUTPWMB") == 0) {
-				set_calibration("VOUT PWM B", &cfg_system.vout_pwm.b, uart_read_buf+idx+1);
-			} else if (strcmp(uart_read_buf, "CALCOUTADCA") == 0) {
-				set_calibration("COUT ADC A", &cfg_system.cout_adc.a, uart_read_buf+idx+1);
-			} else if (strcmp(uart_read_buf, "CALCOUTADCB") == 0) {
-				set_calibration("COUT ADC B", &cfg_system.cout_adc.b, uart_read_buf+idx+1);
-			} else if (strcmp(uart_read_buf, "CALCOUTPWMA") == 0) {
-				set_calibration("COUT PWM A", &cfg_system.cout_pwm.a, uart_read_buf+idx+1);
-			} else if (strcmp(uart_read_buf, "CALCOUTPWMB") == 0) {
-				set_calibration("COUT PWM B", &cfg_system.cout_pwm.b, uart_read_buf+idx+1);
-			} else {
-				uart_write_str("UNKNOWN COMMAND!\r\n");
-			}
-		} else {
-			uart_write_str("UNKNOWN COMMAND\r\n");
-		}
-	}
-	uart_write_str("DONE\r\n");
+    for (int i = 0 ; i < sizeof(commandhandlers)/sizeof(struct command) ; i++)
+    {
+        int cmdlen = commandhandlers[i].commandsize;
+        const char *arg = NULL;
+        if (uart_read_buf[cmdlen]==' ')
+            arg = (const char*)uart_read_buf+cmdlen+1;
+        if (strncmp((const char*)uart_read_buf, commandhandlers[i].command, cmdlen) == 0)
+        {
+            ok = commandhandlers[i].handler(arg);
+        }
+    }
+    if (strncmp((const char*)uart_read_buf, "CAL_", 4) == 0) {
+        for (int i = 0 ; i < sizeof(calibrationhandlers)/sizeof(struct calcommand) ; i++)
+        {
+            int cmdlen = calibrationhandlers[i].commandsize;
+            const char *arg = NULL;
+            if (uart_read_buf[4+cmdlen]==' ')
+                arg = (const char*)uart_read_buf+4+cmdlen+1;
+            if (strncmp((const char*)uart_read_buf+4, calibrationhandlers[i].command, cmdlen) == 0)
+            {
+                ok = set_calibration(calibrationhandlers[i].command, arg, calibrationhandlers[i].value);
+            }
+        }
+    }
+    if (ok)
+        uart_write_str("OK\r\n");
+    else
+        uart_write_str("E!\r\n");
 
 	uart_read_len = 0;
 	read_newline = 0;
@@ -408,7 +508,7 @@ inline void pinout_init()
 	// PC7 is Button 1, input
 	PC_ODR = 0;
 	PC_DDR = (1<<5) | (1<<6);
-	PC_CR1 = (1<<7); // For the button
+	PC_CR1 = ((unsigned)1<<7); // For the button
 	PC_CR2 = (1<<5) | (1<<6);
 
 	// PD1 is Button 2, input
@@ -489,13 +589,13 @@ void ensure_afr0_set(void)
 	if ((OPT2 & 1) == 0) {
 		uart_flush_writes();
 		if (eeprom_set_afr0()) {
-			uart_write_str("AFR0 set, reseting the unit\r\n");
+			uart_write_str("reboot\r\n");
 			uart_flush_writes();
 			iwatchdog_init();
 			while (1); // Force a reset in a few msec
 		}
 		else {
-			uart_write_str("AFR0 not set and programming failed!\r\n");
+			uart_write_str("E!\r\n");
 		}
 	}
 }
@@ -513,7 +613,7 @@ int main()
 
 	config_load();
 
-	uart_write_str("\r\n" MODEL " starting: Version " FW_VERSION "\r\n");
+	uart_write_str("\r\n" MODEL " V:" FW_VERSION "\r\n");
 
 	ensure_afr0_set();
 

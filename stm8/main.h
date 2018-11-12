@@ -2,6 +2,8 @@
 #define MAIN_H
 
 #include "display.h"
+#include <stdint.h>
+#include <stdbool.h>
 
 #ifndef NULL
 #define NULL ((void *) 0)
@@ -18,8 +20,8 @@
 #define CAP_CMAX 3000 // 3 A
 #define CAP_CSTEP 1 // 1 mA
 
-void set_output(uint8_t *s);
-void set_voltage(uint8_t *s, uint16_t voltage);
-void set_current(uint8_t *s, uint16_t current);
+bool set_output(const char *s);
+bool set_voltage(uint16_t voltage);
+bool set_current(uint16_t current);
 
 #endif //MAIN_H
