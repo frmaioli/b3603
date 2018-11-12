@@ -37,11 +37,15 @@ cfg_system_t default_cfg_system = {
 	.output = 0,
 	.autocommit = 1,
 
-	.vin_adc = { .a = FLOAT_TO_FIXED(16*3.3/8.0), .b = 0 },
-	.vout_adc = { .a = FLOAT_TO_FIXED(3.3/0.073/8.0), .b = FLOAT_TO_FIXED(452) },
-	.cout_adc = { .a = FLOAT_TO_FIXED(3.3*1.25/8.0), .b = FLOAT_TO_FIXED(200) },
-	.vout_pwm = { .a = FLOAT_TO_FIXED(8*0.073/3.3), .b = FLOAT_TO_FIXED(33) },
-	.cout_pwm = { .a = FLOAT_TO_FIXED(8*0.8/3.3), .b = FLOAT_TO_FIXED(160) },
+    // pwm = setvoltage * cal.a + cal.b
+    // volt = adcvalue * cal.a - cal.b
+
+	.vin_adc = { .a = FLOAT_TO_FIXED(6.49151), .b = 0 /* -FLOAT_TO_FIXED(97.7583) */ },   // problem : need negative number here.
+	.vout_adc = { .a = FLOAT_TO_FIXED(5.54031), .b = FLOAT_TO_FIXED(594.432) },
+	.vout_pwm = { .a = FLOAT_TO_FIXED(0.180774), .b = FLOAT_TO_FIXED(115.78) },
+
+	.cout_adc = { .a = FLOAT_TO_FIXED(3.3*1.25/8.0), .b = FLOAT_TO_FIXED(200) },   // seems already ok.
+	.cout_pwm = { .a = FLOAT_TO_FIXED(8*0.8/3.3), .b = FLOAT_TO_FIXED(160) },      // still needs tuning.
 };
 
 cfg_output_t default_cfg_output = {
