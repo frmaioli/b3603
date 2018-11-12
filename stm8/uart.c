@@ -209,7 +209,7 @@ void uart_read_to_buf(void)
 	// Empty the read buf if we are overfilling and there is no full command in there
 	if (uart_read_len == sizeof(uart_read_buf) && !read_newline) {
 		uart_read_len = 0;
-		uart_write_str("READ OVERFLOW\r\n");
+		//uart_write_str("READ OVERFLOW\r\n");
 	}
 }
 
