@@ -74,20 +74,28 @@ inline void cvcc_led_off(void)
 	PA_DDR &= ~(1<<3);
 }
 
-uint16_t pwm_from_set(fixed_t set, calibrate_t *cal)
+uint16_t pwm_from_set(uint16_t set, calibrate_t *cal)
 {
 	uint32_t tmp;
 
-	// x*a
-	tmp = set * cal->a;
+    // calc   scalar * fixedpoint
+    //
+	// 'a' is in fixed point format
+    // 'set' is in scalar format
+    //  ->  a * set  is also in fixed point format without adjustment.
+	tmp = (uint32_t)set * cal->a;
 
-	// x*a + b
+	// calc x*a + b
+    // tmp is in fixed point format
+    // 'b' is in fixed point format
+    // ->  tmp + b  is also in fixed point format without adjustment.
 	tmp += cal->b;
 
 	// PWM is 0x8000 and as such amounts to a shift by 13 so to multiple by PWM
 	// we simply shift all calculations by 3 and this avoids overflows and loss
 	// of precision.
 
+    // return value rounded to the nearest integer 
 	return fixed_round(tmp);
 }
 
@@ -95,6 +103,8 @@ inline void control_voltage(cfg_output_t *cfg, cfg_system_t *sys)
 {
 	uint16_t ctr = pwm_from_set(cfg->vset, &sys->vout_pwm);
 	uart_write_str("PWM VOLTAGE ");
+    uart_write_millivalue(cfg->vset);
+    uart_write_ch(' ');
 	uart_write_int(ctr);
 	uart_write_str("\r\n");
 
@@ -107,6 +117,8 @@ inline void control_current(cfg_output_t *cfg, cfg_system_t *sys)
 {
 	uint16_t ctr = pwm_from_set(cfg->cset, &sys->cout_pwm);
 	uart_write_str("PWM CURRENT ");
+    uart_write_millivalue(cfg->cset);
+    uart_write_ch(' ');
 	uart_write_int(ctr);
 	uart_write_str("\r\n");
 
