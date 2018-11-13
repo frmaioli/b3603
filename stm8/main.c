@@ -161,7 +161,7 @@ bool set_voltage(uint16_t voltage)
 }
 bool set_voltage_arg(const char *arg)
 {
-    if (arg == NULL) return;
+    if (arg == NULL) return false;
     return set_voltage(parse_set_value(arg));
 }
 
@@ -185,7 +185,7 @@ bool set_current(uint16_t current)
 }
 bool set_current_arg(const char *arg)
 {
-    if (arg == NULL) return;
+    if (arg == NULL) return false;
     return set_current(parse_set_value(arg));
 }
 
@@ -404,14 +404,6 @@ struct calcommand calibrationhandlers[] = {
     { "COUTADC", 10, &cfg_system.cout_adc, OPTIONAL("configure Cout adc -> ampere parameters") },
     { "COUTPWM", 10, &cfg_system.cout_pwm, OPTIONAL("configure Cout pwm -> ampere parameters") },
 };
-void delay(int n, int m)
-{
-    while (n--) {
-        for (int i=0 ; i < m ; i++)
-            __asm__("nop\n");
-		iwatchdog_tick();
-    }
-}
 bool handle_command_help(const char*arg)
 {
     for (int i = 0 ; i < sizeof(commandhandlers)/sizeof(struct command) ; i++)
@@ -422,10 +414,7 @@ bool handle_command_help(const char*arg)
         uart_write_str(commandhandlers[i].helpmessage);
 #endif
         uart_write_str("\r\n");
-
-        delay(10,1000);
     }
-//  delay(500);
     for (int i = 0 ; i < sizeof(calibrationhandlers)/sizeof(struct calcommand) ; i++)
     {
         uart_write_str("CAL_");
@@ -435,8 +424,6 @@ bool handle_command_help(const char*arg)
         uart_write_str(commandhandlers[i].helpmessage);
 #endif
         uart_write_str("\r\n");
-        delay(10,1000);
-
     }
     return true;
 }
