@@ -24,6 +24,7 @@
 #include "config.h"
 
 void pwm_init(void);
+uint16_t pwm_from_set(uint16_t set, calibrate_t *cal);
 void output_commit(cfg_output_t *cfg, cfg_system_t *sys, uint8_t state_constant_current);
 void output_check_state(cfg_system_t *sys, uint8_t state_constant_current);
 
