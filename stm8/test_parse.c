@@ -21,7 +21,8 @@
 void uart_write_ch(const char ch) { (void)ch; }
 void uart_write_str(const char *s) { (void)s; }
 
-#include "parse.c"
+//#include "parse.c"
+#include "parse.h"
 
 #include <stdio.h>
 

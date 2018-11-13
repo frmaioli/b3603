@@ -22,10 +22,12 @@ void uart_write_ch(const char ch) { (void)ch; }
 void uart_write_str(const char *s) { (void)s; }
 
 
-#include "fixedpoint.c"
-#include "adc.c"
-#include "eeprom.c"
-#include "config.c"
+//#include "fixedpoint.c"
+//#include "adc.c"
+//#include "eeprom.c"
+//#include "config.c"
+#include "config.h"
+#include "parse.h"
 
 #include <stdio.h>
 
