@@ -22,10 +22,9 @@
 #undef DEBUG
 // If USE MILLI is defined the uart will expect to receive values like 12.345, otherwise it will be 12345
 // Using now not defined to save space.
-#undef USE_MILLI
 
 #ifdef USE_MILLI
-uint32_t _parse_num(char *s, char **stop, char *digits_seen)
+uint32_t _parse_num(const char *s, const char **stop, uint8_t *digits_seen)
 {
 	uint8_t digit;
 	uint32_t num = 0;
@@ -45,8 +44,8 @@ uint32_t _parse_num(char *s, char **stop, char *digits_seen)
 
 uint32_t parse_millinum(const char *s)
 {
-	char *t = s;
-	char *stop;
+	const char *t = s;
+	const char *stop;
 	uint32_t fraction_digits = 0;
 	uint32_t whole_digits = 0;
 	uint8_t digits_seen;
