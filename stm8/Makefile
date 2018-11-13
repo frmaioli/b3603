@@ -32,14 +32,17 @@ b3603.ihx: $(OBJ)
 	@echo CC $<
 	@$(SDCC) -c -o $@ $<
 
-test_pwm_accuracy: test_pwm_accuracy.c outputs.c config.c fixedpoint.c
-	gcc -g -Wall -o $@ $< -DTEST=1
+%.o: %.c
+	@$(CC) -c -g -Wall -o $@ $^ -DTEST=1 -DUSE_MILLI=1
 
-test_adc_accuracy: test_adc_accuracy.c config.c adc.c fixedpoint.c
-	gcc -g -Wall -o $@ $< -DTEST=1
+test_pwm_accuracy: test_pwm_accuracy.o outputs.o config.o fixedpoint.o dummy.o
+	@$(CC) -g -Wall -o $@ $^
 
-test_parse: test_parse.c parse.c
-	gcc -g -Wall -o $@ $< -DTEST=1
+test_adc_accuracy: test_adc_accuracy.o config.o adc.o fixedpoint.o dummy.o
+	@$(CC) -g -Wall -o $@ $^
+
+test_parse: test_parse.o parse.o
+	@$(CC) -g -Wall -o $@ $^
 
 clean:
 	-rm -f *.rel *.ihx *.lk *.map *.rst *.lst *.asm *.sym *.adb *.cdb .*.d
