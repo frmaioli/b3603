@@ -30,6 +30,12 @@
 
 #define DEFAULT_NAME_STR "Unnamed"
 
+#ifdef __GNUC__
+#define INLINE
+#else
+#define INLINE inline
+#endif
+
 cfg_system_t default_cfg_system = {
 	.version = SYSTEM_CFG_VERSION,
 	.name = "Unnamed",
@@ -59,7 +65,7 @@ void config_default_system(cfg_system_t *sys)
 	memcpy(sys, &default_cfg_system, sizeof(default_cfg_system));
 }
 
-inline void validate_system_config(cfg_system_t *sys)
+INLINE void validate_system_config(cfg_system_t *sys)
 {
 	if (sys->version != SYSTEM_CFG_VERSION ||
 			sys->name[0] == 0 ||
@@ -96,7 +102,7 @@ void config_default_output(cfg_output_t *cfg)
 	memcpy(cfg, &default_cfg_output, sizeof(default_cfg_output));
 }
 
-inline void validate_output_config(cfg_output_t *cfg)
+INLINE void validate_output_config(cfg_output_t *cfg)
 {
 	if (cfg->version != OUTPUT_CFG_VERSION || cfg->vset == 0 || cfg->cset == 0) {
 		config_default_output(cfg);

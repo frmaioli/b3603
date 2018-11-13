@@ -19,6 +19,12 @@
 #include "eeprom.h"
 #include "stm8s.h"
 
+#ifdef __GNUC__
+#define INLINE
+#else
+#define INLINE inline
+#endif
+
 static uint8_t eeprom_unlock_data(void)
 {
 	uint16_t i;
@@ -29,7 +35,7 @@ static uint8_t eeprom_unlock_data(void)
 	return (FLASH_IAPSR & FLASH_IAPSR_DUL); // True if device unlocked
 }
 
-inline void eeprom_lock(void)
+INLINE void eeprom_lock(void)
 {
 	FLASH_IAPSR &= ~FLASH_IAPSR_DUL;
 }

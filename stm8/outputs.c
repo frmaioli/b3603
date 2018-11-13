@@ -19,12 +19,19 @@
 #include "outputs.h"
 #include "fixedpoint.h"
 #include "uart.h"
+#include "config.h"
 
 #include "stm8s.h"
 
 #define PWM_VAL 0x2000
 #define PWM_HIGH (PWM_VAL >> 8)
 #define PWM_LOW (PWM_VAL & 0xFF)
+
+#ifdef __GNUC__
+#define INLINE
+#else
+#define INLINE inline
+#endif
 
 void pwm_init(void)
 {
@@ -57,19 +64,19 @@ void pwm_init(void)
 	// Timers are still off, will be turned on when output is turned on
 }
 
-inline void cvcc_led_cc(void)
+INLINE void cvcc_led_cc(void)
 {
 	PA_ODR |= (1<<3);
 	PA_DDR |= (1<<3);
 }
 
-inline void cvcc_led_cv(void)
+INLINE void cvcc_led_cv(void)
 {
 	PA_ODR &= ~(1<<3);
 	PA_DDR |= (1<<3);
 }
 
-inline void cvcc_led_off(void)
+INLINE void cvcc_led_off(void)
 {
 	PA_DDR &= ~(1<<3);
 }
@@ -99,7 +106,7 @@ uint16_t pwm_from_set(uint16_t set, calibrate_t *cal)
 	return fixed_round(tmp);
 }
 
-inline void control_voltage(cfg_output_t *cfg, cfg_system_t *sys)
+INLINE void control_voltage(cfg_output_t *cfg, cfg_system_t *sys)
 {
 	uint16_t ctr = pwm_from_set(cfg->vset, &sys->vout_pwm);
 	uart_write_str("PWM VOLTAGE ");
@@ -113,7 +120,7 @@ inline void control_voltage(cfg_output_t *cfg, cfg_system_t *sys)
 	TIM2_CR1 |= 0x01; // Enable timer
 }
 
-inline void control_current(cfg_output_t *cfg, cfg_system_t *sys)
+INLINE void control_current(cfg_output_t *cfg, cfg_system_t *sys)
 {
 	uint16_t ctr = pwm_from_set(cfg->cset, &sys->cout_pwm);
 	uart_write_str("PWM CURRENT ");

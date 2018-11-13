@@ -24,6 +24,12 @@
 #define OVERSAMPLE_DIVIDE (1 << OVERSAMPLE_BITS)
 #define OVERSAMPLE_COUNT (OVERSAMPLE_DIVIDE << OVERSAMPLE_BITS)
 
+#ifdef __GNUC__
+#define INLINE
+#else
+#define INLINE inline
+#endif
+
 static uint32_t sum;
 static uint8_t count;
 
@@ -39,7 +45,7 @@ void adc_init(void)
 	ADC1_CR1 |= 0x01; // Turn on the ADC
 }
 
-inline void _adc_start(void)
+INLINE void _adc_start(void)
 {
 	ADC1_CSR &= 0x7F; // Turn off EOC
 	ADC1_CR1 |= 1; // Trigger conversion
@@ -72,7 +78,7 @@ fixed_t adc_to_volt(uint16_t adc, calibrate_t *cal)
 	return fixed_round(tmp);
 }
 
-inline uint16_t _adc_read(void)
+INLINE uint16_t _adc_read(void)
 {
 		uint16_t val = ADC1_DRL;
 		uint16_t valh = ADC1_DRH;
