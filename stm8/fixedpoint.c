@@ -22,11 +22,11 @@
  * We save one extra bit temporarily and if it is 1 we round up and if it is 0
  * we round down.
  */
-uint32_t fixed_round(uint32_t x)
+uint32_t fixed_round(uint32_t x, uint8_t shifts)
 {
 	uint8_t round;
 
-	x >>= FIXED_SHIFT-1;
+	x >>= shifts-1;
 
 	round = x&1;
 	x >>= 1;

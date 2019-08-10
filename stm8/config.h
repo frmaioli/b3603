@@ -24,7 +24,7 @@
 
 typedef struct {
 	uint8_t version;
-	uint16_t vset; // mV  -  value from 'VOLTAGE' command
+	uint32_t vset; // mV  -  value from 'VOLTAGE' command
 	uint16_t cset; // mA  -  value from 'CURRENT' command
 } cfg_output_t;
 
@@ -56,7 +56,7 @@ typedef struct {
 	uint16_t vout_raw;
 	uint16_t cout_raw;
 	uint16_t vin; // mV
-	uint16_t vout; // mV
+	uint32_t vout; // mV
 	uint16_t cout; // mA
 	uint8_t constant_current; // If false, we are in constant voltage
 #if DEBUG

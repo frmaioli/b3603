@@ -64,18 +64,26 @@ void adc_start(uint8_t channel)
 	count = 0;
 }
 
-fixed_t adc_to_volt(uint16_t adc, calibrate_t *cal)
+uint32_t adc_to_volt(uint16_t adc, calibrate_t *cal)
 {
-	uint32_t tmp;
+	uint32_t tmp, cal_a = cal->a, cal_b = cal->b;
+	uint8_t x = 0;
 
-	tmp = adc * cal->a;
+	//Possibility of 32bits Overflow (This could be improved, for now just by experiencing)
+	if (cal_a > 0x80000) {
+		cal_a >>= 2;
+		cal_b >>= 2;
+		x = 2;
+	}
 
-	if (tmp > cal->b)
-		tmp -= cal->b;
+	tmp = adc * cal_a;
+
+	if (tmp > cal_b)
+		tmp -= cal_b;
 	else
 		tmp = 0;
 
-	return fixed_round(tmp);
+	return fixed_round(tmp, FIXED_SHIFT - x);
 }
 
 INLINE uint16_t _adc_read(void)
@@ -93,7 +101,7 @@ uint16_t adc_read(void)
 
 uint8_t adc_channel(void)
 {
-		return ADC1_CSR & 0x0F;
+	return ADC1_CSR & 0x0F;
 }
 
 uint8_t adc_ready(void)

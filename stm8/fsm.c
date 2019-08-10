@@ -7,7 +7,7 @@
 #include "fsm.h"
 #include "uart.h"
 
-#define TIMER 8000
+#define TIMER 4000
 fsm_states_t Fsm_state = FSM_DISP_VIN;
 fsm_states_t Fsm_state_chain = FSM_DISP_VIN;
 
@@ -39,10 +39,10 @@ void fsm_event_update(fsm_event_t *evt, button_t button, cfg_system_t *sys)
 	evt->st.is_output = sys->output;
 }
 
-void change_control(fsm_event_t *event, bool(*set)(uint16_t), uint16_t val, uint8_t reset)
+void change_control(fsm_event_t *event, bool(*set)(uint32_t), uint32_t val, uint8_t reset)
 {
 	static uint16_t count = 0;
-	uint8_t increment = 10;
+	uint16_t increment = 10;
 
 	if (reset) {
 		count = 0;
@@ -52,13 +52,15 @@ void change_control(fsm_event_t *event, bool(*set)(uint16_t), uint16_t val, uint
 	count++;
 
 	//Execute first time. Start running after ~1s. And do not run too fast
-	if (((count > 1) && (count < 5000)) || (count%80 != 1))
+	if (((count > 1) && (count < TIMER)) || (count%(TIMER/100) != 1))
 		return;
 
-	//Test if the number is like 32.1 or 3.21 and make a logic to increment the last digit
+	//Test if the number is like 321, 32.1 or 3.21 and make a logic to increment the last digit
 	//But only for first touch (count = 1). Keep the same running speed for the rest
-	if (((val/10000)%10) && (count == 1))
-		increment = 100;
+	if (count == 1) {
+		if ((val/10000)%10) increment = 100;    //32.1
+		if ((val/100000)%10) increment = 1000;  //321
+	}
 
 	if (event->st.is_button_up) val += increment;
 	if (event->st.is_button_down) val -= increment;

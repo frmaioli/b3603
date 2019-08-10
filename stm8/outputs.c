@@ -20,6 +20,7 @@
 #include "fixedpoint.h"
 #include "uart.h"
 #include "config.h"
+#include "main.h"
 
 #include "stm8s.h"
 
@@ -81,38 +82,64 @@ INLINE void cvcc_led_off(void)
 	PA_DDR &= ~(1<<3);
 }
 
-uint16_t pwm_from_set(uint16_t set, calibrate_t *cal)
+uint16_t pwm_from_set(uint32_t set, calibrate_t *cal)
 {
 	uint32_t tmp;
 
-    // calc   scalar * fixedpoint
-    //
+	// calc   scalar * fixedpoint
 	// 'a' is in fixed point format
-    // 'set' is in scalar format
-    //  ->  a * set  is also in fixed point format without adjustment.
-	tmp = (uint32_t)set * cal->a;
+	// 'set' is in scalar format
+	//  ->  a * set  is also in fixed point format without adjustment.
+	tmp = set * cal->a;
 
-	// calc x*a + b
-    // tmp is in fixed point format
-    // 'b' is in fixed point format
-    // ->  tmp + b  is also in fixed point format without adjustment.
+	// B3603: y = x*a + b
+	// B900W: y = x*a - b
+	// tmp is in fixed point format
+	// 'b' is in fixed point format
+	// ->  tmp + b  is also in fixed point format without adjustment.
+#ifdef b900w
+	uart_write_str("Its ME ");
+        uart_write_int32(tmp);
+        uart_write_ch(' ');
+	uart_write_int32(cal->b);
+	uart_write_str("\r\n");
+
+	if (tmp > cal->b)
+		tmp -= cal->b;
+	else
+		tmp = 0;
+#endif
+#ifdef b3603
 	tmp += cal->b;
+#endif
 
 	// PWM is 0x8000 and as such amounts to a shift by 13 so to multiple by PWM
 	// we simply shift all calculations by 3 and this avoids overflows and loss
 	// of precision.
 
-    // return value rounded to the nearest integer 
-	return fixed_round(tmp);
+	// return value rounded to the nearest integer 
+	return fixed_round(tmp, FIXED_SHIFT);
 }
 
 INLINE void control_voltage(cfg_output_t *cfg, cfg_system_t *sys)
 {
-	uint16_t ctr = pwm_from_set(cfg->vset, &sys->vout_pwm);
+	uint16_t ctr;
+	uint32_t set = cfg->vset;
+
+#ifdef b900w
+	// Commit Protection: B900W is a step-up converter and the output can't be lower than Vin + 1V
+	set = (cfg->vset >= (state.vin+1000)) ? cfg->vset : (state.vin+1000);
+#endif
+#ifdef b3603
+	// Commit Protection: B3603 is a step-down converter and the output can't be higher than Vin - 1V
+	set = (cfg->vset <= (state.vin-1000)) ? cfg->vset : (state.vin-1000);
+#endif
+		
+	ctr = pwm_from_set(set, &sys->vout_pwm);
 	uart_write_str("PWM VOLTAGE ");
-    uart_write_millivalue(cfg->vset);
-    uart_write_ch(' ');
-	uart_write_int(ctr);
+        uart_write_millivalue(set);
+        uart_write_ch(' ');
+	uart_write_int32(ctr);
 	uart_write_str("\r\n");
 
 	TIM2_CCR1H = ctr >> 8;
@@ -124,8 +151,8 @@ INLINE void control_current(cfg_output_t *cfg, cfg_system_t *sys)
 {
 	uint16_t ctr = pwm_from_set(cfg->cset, &sys->cout_pwm);
 	uart_write_str("PWM CURRENT ");
-    uart_write_millivalue(cfg->cset);
-    uart_write_ch(' ');
+	uart_write_millivalue(cfg->cset);
+	uart_write_ch(' ');
 	uart_write_int(ctr);
 	uart_write_str("\r\n");
 

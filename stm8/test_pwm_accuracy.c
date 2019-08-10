@@ -21,14 +21,19 @@
 void uart_write_ch(const char ch) { (void)ch; }
 void uart_write_str(const char *s) { (void)s; }
 void uart_write_int(uint16_t v) { (void)v; }
+void uart_write_millivalue(uint32_t val) { (void)val; }
+void uart_write_int32(uint32_t val) { (void)val; }
 
 //#include "fixedpoint.c"
 //#include "outputs.c"
 //#include "eeprom.c"
 //#include "config.c"
 #include "config.h"
+#include "outputs.h"
 
 #include <stdio.h>
+
+state_t state;
 
 int main()
 {

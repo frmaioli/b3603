@@ -1,9 +1,8 @@
-# B3603
+# B3603 & B900W
 
-This project is about reverse engineering the B3603 control board and figuring
+This project is based on Baruch reverse engineering of the the B3603 control board and figuring
 out how it works, then it should be possible to create an alternative firmware.
-Either by driving it with another board on the same control points or by
-replacing the original firmware with one of my own.
+The software was extended with a functional menu for the buttons, redesing of Serial commands and support for the B900W board.
 
 **Current state**: Working, it is functioning and serially controllable.
 
@@ -16,6 +15,106 @@ Software needed:
 * [SDCC v 3.7.0] sudo apt install sdcc
 * [stm8flash](https://github.com/vdudouyt/stm8flash) -- STM8 flasher
   To compile you will need to install libgusb-dev. To build, run Make and after Make install.
+
+## Buttons Menu
+```
+{Key}
+[State]
+
+                               {Set}                   {Set}
+(Power Up) ---> [Display Vin] -------> [Display Vout] -------> [Display Iout]
+                      ^                                              |
+                      '-----------------------------------------------
+                                            {Set}
+
+
+[Display  Vin]   {Ok}                {Ok}
+[Display Vout] -------> [Confirm?] -------> [Set oonfig to output]
+[DIsplay Iout] <-------------'
+                 {Any Other}
+
+
+[Display  Vin]  {Set}            {Set}
+[Display Vout] -------> [Save?] -------> [Save config in flash]
+[DIsplay Iout] <-----------'
+                {Any Other}
+
+
+                {Up|Down*}
+[Display Vout] -----------> [Increase|Decrese]
+[DIsplay Iout] <---------------------'
+
+*Holding the Button will make the action faster
+
+
+                {Up|Down*}
+[Display Vin] ------------> [No action]
+              <------------------'
+
+```
+
+## Instructions
+
+**FLASH**
+
+*Removing protection:*
+```
+stm8flash -c stlinkv2 -p stm8s003f3 -u
+```
+If that didn't work, try this:
+```
+echo "00" | xxd -r -p > ROP_CLEAR.bin
+stm8flash -c stlinkv2 -p stm8s003f3 -s opt -w ROP_CLEAR.bin
+```
+
+*Reading the flash*
+```
+stm8flash -c stlinkv2 -p stm8s003f3 -s flash -r b3603_read.ihx
+```
+
+*Writting the flash*
+```
+stm8flash -c stlinkv2 -p stm8s003f3 -s flash -w b3603.ihx
+```
+Or simply *make deploy* after compiling the project.
+
+Important:
+To write the flash, disconnect it from the power.
+Avoid using serial and stlinkv2 simultaneously.
+
+
+**Using the Serial**
+Software: Minicom
+ttyUSB0
+38400 - 8N1
+In Keyboard settings enable "echo"
+
+**Simulate STM8 in PC**
+```
+sstm8 -g -w -tstm8s003 -Suart=1,port=10000 b3603.ihx 
+```
+
+And to connect:
+```
+telnet localhost 10000
+```
+
+**Calibration:**
+Start initializing for safety:
+```
+./calibrate.py -i /dev/ttyUSB0
+```
+Adjust the parameters in the script as desired.
+For voltage calibration, connect the multimeter with the circuit opened and run:
+```
+./calibrate.py -m voltage /dev/ttyUSB0
+```
+For current calibration, only for the B3603 it is possible to curt-circuit the connection.
+For the B900W it is necessary to have a load. An Iron is a good option, with 1600W in 220V it has around 30 ohms, allowing a current of 4Amps at the maximum of 120V.
+Connect the Multimeter in serie and after, run:
+```
+./calibrate.py -m current /dev/ttyUSB0
+```
 
 ## Schematics
 

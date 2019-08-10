@@ -138,12 +138,12 @@ void uart_write_int32(uint32_t val)
 	}
 }
 
-void uart_write_millivalue(uint16_t val)
+void uart_write_millivalue(uint32_t val)
 {
 	int8_t i;
 	uint8_t highest_nonzero;
 
-	highest_nonzero = int_to_digits(val);
+	highest_nonzero = int32_to_digits(val);
 
 	for (i = highest_nonzero-1; i >= 0; i--) {
 		if (i == 2)
@@ -165,7 +165,7 @@ void uart_write_fixed_point(uint32_t val)
 	tmp = val & FIXED_FRACTION_MASK;
 
 	// Take three decimal digits from the fraction part
-	tmp = fixed_round(tmp*10000);
+	tmp = fixed_round(tmp*10000, FIXED_SHIFT);
 
 	// Pad with zeros if the number is too small
 	if (tmp < 1000)

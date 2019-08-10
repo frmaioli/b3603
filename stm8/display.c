@@ -30,7 +30,7 @@ static uint8_t Pending_update;
 #define NALFA 17
 static const uint8_t num_code[NALFA] = {0xFC,0x60,0xDA,0xF2,0x66,0xB6,0xBE,0xE0,0xFE,0xF6,0xEE,0x9C,0x9E,0x8E,0xEC,0xFC,0x7C,};
 static const char alfa_code[NALFA]   = {'0' ,'1' ,'2' ,'3' ,'4' ,'5' ,'6' ,'7' ,'8' ,'9' ,'A' ,'C' ,'E' ,'F' ,'N' ,'O' ,'V',};
-static uint16_t divisor[4] = {10000, 1000, 100, 10};
+static uint16_t divisor[3] = {100, 10, 1};
 
 #define SET_DATA(bit) do { if (bit) { PD_ODR |= (1<<4); } else { PD_ODR &= ~(1<<4); }} while (0)
 #define PULSE_CLOCK() do { PA_ODR |= (1<<1); PA_ODR &= ~(1<<1); } while (0)
@@ -113,18 +113,26 @@ uint8_t display_char(uint8_t ch, uint8_t dot)
 	return dot;
 }
 
-void display_smart_digits(uint16_t disp_value, uint8_t *pending_display_p)
+void display_smart_digits(uint32_t disp_value, uint8_t *pending_display_p)
 {
-	uint8_t ch = 0;
-	uint8_t dot = 0;
-	uint8_t i = 0, c = 0;
-	
+	uint16_t three_dig;
+	uint8_t dot_dig = 0, dot = 0, ch = 0, c = 0, i;
+
 	//Display the number, with the dot changing position when skiping not significant zero
-	for (i = 0; i < 4; i++) {
-		ch = (disp_value/divisor[i])%10;
-		//Ignore zero or less (3th after dot) significant digit
-		if ((i == 0 && ch == 0)||(c > 2)) continue;
-		if (i == 1) dot = 1;
+	if (disp_value >= 100000) {          //Ex: 123.  V
+		three_dig = disp_value/1000;
+		dot_dig = 3;
+	} else if (disp_value >= 10000) {    //Ex: 12.3 V
+		three_dig = disp_value/100;
+		dot_dig = 2;
+	} else {                             //Ex: 1.23 V or 0.12 V or 0.01 V or 0.00 V
+		three_dig = disp_value/10;
+		dot_dig = 1;
+	}
+
+	for (i = 0; i < 3; i++) {
+		ch = (three_dig/divisor[i])%10;
+		if (i+1 == dot_dig) dot = 1;
 		*(pending_display_p - c++) = display_char(ch, dot);
 		dot = 0;
 	}
@@ -139,7 +147,7 @@ void display_vin(uint16_t vin_value, uint8_t update_type)
 	Pending_update = update_type;
 }
 
-void display_vout(uint16_t vout_value, uint8_t update_type)
+void display_vout(uint32_t vout_value, uint8_t update_type)
 {
 	//Display 'V' - Voltage.
 	Pending_display_data[0] = display_char(16, 0);

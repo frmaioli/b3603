@@ -25,8 +25,8 @@
 #define SYSTEM_CONFIG ((cfg_system_t *)0x4000)
 #define OUTPUT_CONFIG ((cfg_output_t *)0x4040)
 
-#define SYSTEM_CFG_VERSION 2
-#define OUTPUT_CFG_VERSION 2
+#define SYSTEM_CFG_VERSION 3
+#define OUTPUT_CFG_VERSION 3
 
 #define DEFAULT_NAME_STR "Unnamed"
 
@@ -43,21 +43,34 @@ cfg_system_t default_cfg_system = {
 	.output = 0,
 	.autocommit = 1,
 
-    // pwm = setvoltage * cal.a + cal.b
-    // volt = adcvalue * cal.a - cal.b
+#ifdef b3603
+	// pwm = setvoltage * cal.a + cal.b
+	// volt = adcvalue * cal.a - cal.b
 
-	.vin_adc = { .a = FLOAT_TO_FIXED(6.49151), .b = 0 /* -FLOAT_TO_FIXED(97.7583) */ },   // problem : need negative number here.
-	.vout_adc = { .a = FLOAT_TO_FIXED(5.54031), .b = FLOAT_TO_FIXED(594.432) },
-	.vout_pwm = { .a = FLOAT_TO_FIXED(0.180774), .b = FLOAT_TO_FIXED(115.78) },
+	.vin_adc = { .a = FLOAT_TO_FIXED(6.398), .b = 0 /* -FLOAT_TO_FIXED(97.7583) */ },   // problem : need negative number here.
+	.vout_adc = { .a = FLOAT_TO_FIXED(5.5681), .b = FLOAT_TO_FIXED(580.6878) },
+	.vout_pwm = { .a = FLOAT_TO_FIXED(0.1803), .b = FLOAT_TO_FIXED(111.7264) },
 
-	.cout_adc = { .a = FLOAT_TO_FIXED(3.3*1.25/8.0), .b = FLOAT_TO_FIXED(200) },   // seems already ok.
-	.cout_pwm = { .a = FLOAT_TO_FIXED(8*0.8/3.3), .b = FLOAT_TO_FIXED(160) },      // still needs tuning.
+	.cout_adc = { .a = FLOAT_TO_FIXED(0.4860), .b = FLOAT_TO_FIXED(173.3114) },
+	.cout_pwm = { .a = FLOAT_TO_FIXED(2.0585), .b = FLOAT_TO_FIXED(368.0794) },
+#endif
+#ifdef b900w
+	// pwm = setvoltage * cal.a - cal.b
+	// volt = adcvalue * cal.a - cal.b
+
+	.vin_adc = { .a = FLOAT_TO_FIXED(13.8855), .b = 0 /* -FLOAT_TO_FIXED(97.7583) */ },   // problem : need negative number here.
+	.vout_adc = { .a = FLOAT_TO_FIXED(25.5682), .b = FLOAT_TO_FIXED(580.6878) },
+	.vout_pwm = { .a = FLOAT_TO_FIXED(0.0375), .b = 0 },
+
+	.cout_adc = { .a = FLOAT_TO_FIXED(0.4860), .b = FLOAT_TO_FIXED(173.3114) },
+	.cout_pwm = { .a = FLOAT_TO_FIXED(2.0585), .b = FLOAT_TO_FIXED(368.0794) },
+#endif
 };
 
 cfg_output_t default_cfg_output = {
 	OUTPUT_CFG_VERSION,
-	5000, // 5V
-	500, // 0.5A
+	10000, // 10V
+	500,   // 0.5A
 };
 
 void config_default_system(cfg_system_t *sys)

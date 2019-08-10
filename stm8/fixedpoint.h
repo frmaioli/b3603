@@ -35,6 +35,6 @@ typedef uint16_t fixed_t;
 #define FLOAT_TO_FIXED_BASE(f) (uint32_t)( (f)*(1LU<<(FIXED_SHIFT+1)) )
 #define FLOAT_TO_FIXED_ROUNDING(f) (FLOAT_TO_FIXED_BASE(f) & 1)
 #define FLOAT_TO_FIXED(f) (uint32_t)((FLOAT_TO_FIXED_BASE(f) >> 1) + FLOAT_TO_FIXED_ROUNDING(f))
-uint32_t fixed_round(uint32_t x);
+uint32_t fixed_round(uint32_t x, uint8_t shifts);
 
 #endif

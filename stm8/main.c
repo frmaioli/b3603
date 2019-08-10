@@ -29,7 +29,6 @@
 #include "uart.h"
 #include "eeprom.h"
 #include "outputs.h"
-#include "config.h"
 #include "parse.h"
 #include "adc.h"
 #include "buttons.h"
@@ -143,18 +142,16 @@ bool set_output(const char *s)
 
 
 // voltage in mV
-bool set_voltage(uint16_t voltage)
+bool set_voltage(uint32_t voltage)
 {
-	uint16_t val = voltage;
-
-	if (val == 0xFFFF)
+	if (voltage == 0xFFFFFFFF)
 		return false;
 
-	if ((val > CAP_VMAX) || (val < CAP_VMIN)) {  // 10 .. 35000 mV
+	if ((voltage > CAP_VMAX) || (voltage < CAP_VMIN)) {
 		return false;
 	}
 
-	cfg_output.vset = val;
+	cfg_output.vset = voltage;
 	autocommit();
 
 	return true;
@@ -167,18 +164,16 @@ bool set_voltage_arg(const char *arg)
 
 
 /* current in mA */
-bool set_current(uint16_t current)
+bool set_current(uint32_t current)
 {
-	uint16_t val = current;
-
-	if (val == 0xFFFF)
+	if (current >= 0xFFFF)
 		return false;
 
-	if ((val > CAP_CMAX) || (val < CAP_CMIN)) {  // 1 .. 3000 mA
+	if ((current > CAP_CMAX) || (current < CAP_CMIN)) {
 		return false;
 	}
 
-	cfg_output.cset = val;
+	cfg_output.cset = (uint16_t) current;
 	autocommit();
 
 	return true;
@@ -242,7 +237,7 @@ void write_onoff(const char *prefix, uint8_t on)
 	write_str(prefix, on ? "ON" : "OFF");
 }
 
-void write_millivalue(const char *prefix, uint16_t millival)
+void write_millivalue(const char *prefix, uint32_t millival)
 {
 	uart_write_str(prefix);
 	uart_write_millivalue(millival);
@@ -286,10 +281,8 @@ bool handle_limit_dump(const char *arg)
 {
     write_millivalue("VMIN: ", CAP_VMIN);
     write_millivalue("VMAX: ", CAP_VMAX);
-    write_millivalue("VSTEP:", CAP_VSTEP);
     write_millivalue("CMIN: ", CAP_CMIN);
     write_millivalue("CMAX: ", CAP_CMAX);
-    write_millivalue("CSTEP:", CAP_CSTEP);
     return true;
 }
 bool handle_config_dump(const char *arg)
