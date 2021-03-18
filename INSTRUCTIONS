@@ -1,8 +1,5 @@
 FLASH 
 Removing protection:
-echo "00" | xxd -r -p > ROP_CLEAR.bin
-stm8flash -c stlinkv2 -p stm8s003f3 -s opt -w ROP_CLEAR.bin
-NOOOO, better this:
 stm8flash -c stlinkv2 -p stm8s003f3 -u
 
 Reading the flash
@@ -27,13 +24,10 @@ and to connect:
 telnet localhost 10000
 
 Calibration:
-./calibrate.py -m voltage /dev/ttyUSB0
+Calibration requires Python 2.7 
 
-calibration (multiply by 65535 to get the raw data)
-0006.6000/0000.0000
-0005.5681/0580.6878
-0000.4860/0173.3114
-0000.1803/0111.7264
-0002.0585/0368.0794
+python2 calibrate.py -m voltage /dev/ttyUSB0
+
+
 
 

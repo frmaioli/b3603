@@ -145,12 +145,34 @@ void uart_write_millivalue(uint16_t val)
 
 	highest_nonzero = int_to_digits(val);
 
-	for (i = highest_nonzero-1; i >= 0; i--) {
-		if (i == 2)
+
+// Suppress least sig digit. When BST converted to 10mV resolution this can be removed
+//	for (i = highest_nonzero-1; i >= 0; i--) {
+	for (i = highest_nonzero-1; i > 0; i--) {
+		if (i == 2)			//For 10mV resolution make this i=3
 			uart_write_ch('.');
 		uart_write_ch(digits_buf[i]);
 	}
 }
+
+void uart_write_centivalue(uint16_t val)
+{
+	int8_t i;
+	uint8_t highest_nonzero;
+
+	highest_nonzero = int_to_digits(val);
+
+
+
+//	for (i = highest_nonzero-1; i >= 0; i--) {
+	for (i = highest_nonzero-1; i >= 0; i--) {
+		if (i == 1)			//For 10mV resolution make this i=3
+			uart_write_ch('.');
+		uart_write_ch(digits_buf[i]);
+	}
+}
+
+
 
 void uart_write_fixed_point(uint32_t val)
 {

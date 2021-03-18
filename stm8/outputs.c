@@ -23,7 +23,7 @@
 
 #include "stm8s.h"
 
-#define PWM_VAL 0x2000
+#define PWM_VAL 0x2000	//Gives PWM frequency of 1.591kHz
 #define PWM_HIGH (PWM_VAL >> 8)
 #define PWM_LOW (PWM_VAL & 0xFF)
 
@@ -110,7 +110,7 @@ INLINE void control_voltage(cfg_output_t *cfg, cfg_system_t *sys)
 {
 	uint16_t ctr = pwm_from_set(cfg->vset, &sys->vout_pwm);
 	uart_write_str("PWM VOLTAGE ");
-    uart_write_millivalue(cfg->vset);
+    uart_write_centivalue(cfg->vset);
     uart_write_ch(' ');
 	uart_write_int(ctr);
 	uart_write_str("\r\n");

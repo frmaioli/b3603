@@ -19,6 +19,8 @@
 #include "display.h"
 #include "stm8s.h"
 #include "uart.h"
+#include "outputs.h"
+#include "config.h"
 
 #include <string.h>
 
@@ -108,34 +110,37 @@ uint8_t display_char(uint8_t ch, uint8_t dot)
 {
 	if (dot)
 		dot = 1;
-	if (ch >= 0 && ch <= NALFA)
+	//if (ch >= 0 && ch <= NALFA)
+		if ( ch <= NALFA)
 		return num_code[ch] | dot;
 	return dot;
 }
 
-void display_smart_digits(uint16_t disp_value, uint8_t *pending_display_p)
+
+void display_smart_digits(uint16_t disp_value, uint8_t *pending_display_p, uint8_t units)
 {
 	uint8_t ch = 0;
 	uint8_t dot = 0;
 	uint8_t i = 0, c = 0;
 	
-	//Display the number, with the dot changing position when skiping not significant zero
+	//Display the number, with the dot changing position when skipping not significant zero
 	for (i = 0; i < 4; i++) {
 		ch = (disp_value/divisor[i])%10;
 		//Ignore zero or less (3th after dot) significant digit
 		if ((i == 0 && ch == 0)||(c > 2)) continue;
-		if (i == 1) dot = 1;
+		if (i == units+1) dot = 1;		//Decimal position defined by parameter units 0= milli , 1 = centi
 		*(pending_display_p - c++) = display_char(ch, dot);
 		dot = 0;
 	}
 }
+
 
 void display_vin(uint16_t vin_value, uint8_t update_type)
 {
 	//Display 'E' - Entrance.
 	Pending_display_data[3] = display_char(12, 0);
 	//Display Digits
-	display_smart_digits(vin_value, &Pending_display_data[2]);
+	display_smart_digits(vin_value, &Pending_display_data[2], 1);		//use centi precision
 	Pending_update = update_type;
 }
 
@@ -144,7 +149,7 @@ void display_vout(uint16_t vout_value, uint8_t update_type)
 	//Display 'V' - Voltage.
 	Pending_display_data[0] = display_char(16, 0);
 	//Display Digits
-	display_smart_digits(vout_value, &Pending_display_data[3]);
+	display_smart_digits(vout_value, &Pending_display_data[3], 1);		//use centi precision
 	Pending_update = update_type;
 }
 
@@ -153,7 +158,7 @@ void display_iout(uint16_t iout_value, uint8_t update_type)
 	//Display 'A' - Ampere.
 	Pending_display_data[0] = display_char(10, 0);
 	//Display Digits
-	display_smart_digits(iout_value, &Pending_display_data[3]);
+	display_smart_digits(iout_value, &Pending_display_data[3], 0);		//use milli precision
 	Pending_update = update_type;
 }
 

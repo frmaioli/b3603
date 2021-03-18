@@ -1,4 +1,5 @@
 /* Copyright (C) 2015 Baruch Even
+ * Modified by Fabiano R Maioli in 2018
  *
  * This file is part of the B3603 alternative firmware.
  *
@@ -142,7 +143,7 @@ bool set_output(const char *s)
 }
 
 
-// voltage in mV
+// voltage in cV --centiVolts
 bool set_voltage(uint16_t voltage)
 {
 	uint16_t val = voltage;
@@ -150,7 +151,7 @@ bool set_voltage(uint16_t voltage)
 	if (val == 0xFFFF)
 		return false;
 
-	if ((val > CAP_VMAX) || (val < CAP_VMIN)) {  // 10 .. 35000 mV
+	if ((val > CAP_VMAX) || (val < CAP_VMIN)) {
 		return false;
 	}
 
@@ -162,7 +163,8 @@ bool set_voltage(uint16_t voltage)
 bool set_voltage_arg(const char *arg)
 {
     if (arg == NULL) return false;
-    return set_voltage(parse_set_value(arg));
+    uint32_t tmp = parse_set_value(arg)/10;		//Convert to centiVolts
+    return set_voltage(tmp);
 }
 
 
@@ -174,7 +176,7 @@ bool set_current(uint16_t current)
 	if (val == 0xFFFF)
 		return false;
 
-	if ((val > CAP_CMAX) || (val < CAP_CMIN)) {  // 1 .. 3000 mA
+	if ((val > CAP_CMAX) || (val < CAP_CMIN)) {
 		return false;
 	}
 
@@ -248,6 +250,14 @@ void write_millivalue(const char *prefix, uint16_t millival)
 	uart_write_millivalue(millival);
 	uart_write_str("\r\n");
 }
+
+void write_centivalue(const char *prefix, uint16_t centival)
+{
+	uart_write_str(prefix);
+	uart_write_centivalue(centival);
+	uart_write_str("\r\n");
+}
+
 void write_raw_millivalue(const char *prefix, uint16_t millival, uint16_t rawval)
 {
 	uart_write_str(prefix);
@@ -256,6 +266,18 @@ void write_raw_millivalue(const char *prefix, uint16_t millival, uint16_t rawval
 	uart_write_int(rawval);
 	uart_write_str("\r\n");
 }
+
+
+
+void write_raw_centivalue(const char *prefix, uint16_t centival, uint16_t rawval)
+{
+	uart_write_str(prefix);
+	uart_write_centivalue(centival);
+	uart_write_ch(' ');
+	uart_write_int(rawval);
+	uart_write_str("\r\n");
+}
+
 
 void write_int(const char *prefix, uint16_t val)
 {
@@ -284,9 +306,9 @@ bool handle_calibration_dump(const char *arg)
 }
 bool handle_limit_dump(const char *arg)
 {
-    write_millivalue("VMIN: ", CAP_VMIN);
-    write_millivalue("VMAX: ", CAP_VMAX);
-    write_millivalue("VSTEP:", CAP_VSTEP);
+    write_centivalue("VMIN: ", CAP_VMIN);
+    write_centivalue("VMAX: ", CAP_VMAX);
+    write_centivalue("VSTEP:", CAP_VSTEP);
     write_millivalue("CMIN: ", CAP_CMIN);
     write_millivalue("CMAX: ", CAP_CMAX);
     write_millivalue("CSTEP:", CAP_CSTEP);
@@ -295,15 +317,15 @@ bool handle_limit_dump(const char *arg)
 bool handle_config_dump(const char *arg)
 {
     write_onoff(     "OUTPUT: ", cfg_system.output);
-    write_millivalue("VSET: ", cfg_output.vset);
+    write_centivalue("VSET: ", cfg_output.vset);
     write_millivalue("CSET: ", cfg_output.cset);
     return true;
 }
 bool handle_status_dump(const char *arg)
 {
     write_onoff(         "OUTPUT: ", cfg_system.output);
-    write_raw_millivalue("VIN:  ", state.vin,  state.vin_raw );
-    write_raw_millivalue("VOUT: ", state.vout, state.vout_raw);
+    write_raw_centivalue("VIN:  ", state.vin,  state.vin_raw );
+    write_raw_centivalue("VOUT: ", state.vout, state.vout_raw);
     write_raw_millivalue("COUT: ", state.cout, state.cout_raw);
     write_str(           "CONSTANT: ", state.constant_current ? "CURRENT" : "VOLTAGE");
     return true;
@@ -429,8 +451,8 @@ void process_input()
     bool ok = false;
 	// Eliminate the CR/LF character
 	uart_read_buf[uart_read_len-1] = 0;
-
-    for (int i = 0 ; i < sizeof(commandhandlers)/sizeof(struct command) ; i++)
+	int i;
+    for ( i = 0 ; i < sizeof(commandhandlers)/sizeof(struct command) ; i++)
     {
         int cmdlen = commandhandlers[i].commandsize;
         const char *arg = NULL;
@@ -442,7 +464,7 @@ void process_input()
         }
     }
     if (strncmp((const char*)uart_read_buf, "CAL_", 4) == 0) {
-        for (int i = 0 ; i < sizeof(calibrationhandlers)/sizeof(struct calcommand) ; i++)
+        for ( i = 0 ; i < sizeof(calibrationhandlers)/sizeof(struct calcommand) ; i++)
         {
             int cmdlen = calibrationhandlers[i].commandsize;
             const char *arg = NULL;
@@ -483,7 +505,7 @@ inline void pinout_init()
 	PB_CR1 = (1<<4);
 	PB_CR2 = 0;
 
-	// PC3 is unknown, input
+	// PC3 is Fan control, output
 	// PC4 is Iout sense, input adc, AIN2
 	// PC5 is Vout control, output
 	// PC6 is Iout control, output

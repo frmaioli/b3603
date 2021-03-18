@@ -56,7 +56,7 @@ cfg_system_t default_cfg_system = {
 
 cfg_output_t default_cfg_output = {
 	OUTPUT_CFG_VERSION,
-	5000, // 5V
+	500, // 5V
 	500, // 0.5A
 };
 

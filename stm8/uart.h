@@ -29,5 +29,6 @@ void uart_write_int(uint16_t val);
 void uart_write_int32(uint32_t val);
 void uart_write_fixed_point(uint32_t val);
 void uart_write_millivalue(uint16_t val);
+void uart_write_centivalue(uint16_t val);
 void uart_drive(void);
 void uart_flush_writes(void);
