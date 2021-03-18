@@ -19,6 +19,7 @@
 #include "uart.h"
 #include "fixedpoint.h"
 #include "stm8s.h"
+#include "main.h"
 
 uint8_t uart_write_buf[255]; //Device has only 1KByte Memory Ram. Better to not make this too big.
 uint8_t uart_write_start;
@@ -74,6 +75,10 @@ void uart_write_str(const char *str)
 		uart_write_buf[uart_write_len] = str[i];
 		uart_write_len++;
 	}
+}
+
+void uart_write_crlf() {
+	uart_write_str(CRLF);
 }
 
 uint8_t digits_buf[12];
@@ -233,7 +238,7 @@ void uart_read_to_buf(void)
 	// Empty the read buf if we are overfilling and there is no full command in there
 	if (uart_read_len == sizeof(uart_read_buf) && !read_newline) {
 		uart_read_len = 0;
-		//uart_write_str("READ OVERFLOW\r\n");
+		//uart_write_str("READ OVERFLOW" CRLF);
 	}
 }
 

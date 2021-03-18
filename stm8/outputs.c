@@ -33,6 +33,8 @@
 #define INLINE inline
 #endif
 
+extern state_t state;
+
 void pwm_init(void)
 {
 	/* Timer 1 Channel 1 for Iout control */
@@ -111,35 +113,28 @@ INLINE void control_voltage(cfg_output_t *cfg, cfg_system_t *sys)
 	uint16_t ctr = pwm_from_set(cfg->vset, &sys->vout_pwm);
 	uart_write_str("PWM VOLTAGE ");
     uart_write_centivalue(cfg->vset);
-    uart_write_ch(' ');
-	uart_write_int(ctr);
-	uart_write_str("\r\n");
+	uart_write_crlf();
 
 	TIM2_CCR1H = ctr >> 8;
 	TIM2_CCR1L = ctr & 0xFF;
 	TIM2_CR1 |= 0x01; // Enable timer
 }
-
-INLINE void control_current(cfg_output_t *cfg, cfg_system_t *sys)
+INLINE void control_current(cfg_output_t *cfg)
 {
-	uint16_t ctr = pwm_from_set(cfg->cset, &sys->cout_pwm);
 	uart_write_str("PWM CURRENT ");
     uart_write_millivalue(cfg->cset);
-    uart_write_ch(' ');
-	uart_write_int(ctr);
-	uart_write_str("\r\n");
-
-	TIM1_CCR1H = ctr >> 8;
-	TIM1_CCR1L = ctr & 0xFF;
+	uart_write_crlf();
+// In closed loop let current slide from one setting to the next
 	TIM1_CR1 |= 0x01; // Enable timer
 }
+
 
 void output_commit(cfg_output_t *cfg, cfg_system_t *sys, uint8_t state_constant_current)
 {
 	// Startup and shutdown orders need to be in reverse order
 	if (sys->output) {
 		control_voltage(cfg, sys);
-		control_current(cfg, sys);
+		control_current(cfg);	
 
 		// We turned on the PWMs above already
 		PB_ODR &= ~(1<<4);

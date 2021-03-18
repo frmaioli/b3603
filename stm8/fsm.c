@@ -180,7 +180,7 @@ void process_fsm(button_t button, cfg_system_t *sys, cfg_output_t *cfg, state_t 
 			display_save((Fsm_state == Fsm_state_chain) ? UPDATE_SLOW : UPDATE_FAST);
 			break;
 		case FSM_SAVE_CFG:
-			uart_write_str((config_save_output(cfg) == 0) ? "E!\r\n" : "OK\r\n");
+			uart_write_str((config_save_output(cfg) == 0) ? "E!" CRLF : "OK" CRLF);
 			break;
 	}
 }

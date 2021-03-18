@@ -67,6 +67,12 @@ void commit_output()
 
 void write_calibration(calibrate_t *val  OPTIONALARG(const char *tag))
 {
+#ifdef VERBOSECAL
+    if (tag) {
+        uart_write_str(tag);
+        uart_write_ch(' ');
+    }
+#endif
     uart_write_fixed_point(val->a);
     uart_write_ch('/');
     uart_write_fixed_point(val->b);
@@ -75,13 +81,7 @@ void write_calibration(calibrate_t *val  OPTIONALARG(const char *tag))
     uart_write_int32(val->a);
     uart_write_ch('/');
     uart_write_int32(val->b);
-#ifdef VERBOSECAL
-    if (tag) {
-        uart_write_ch(' ');
-        uart_write_str(tag);
-    }
-#endif
-    uart_write_str("\r\n");
+    uart_write_crlf();
 }
 
 bool handle_set_name(const char *name)
@@ -105,7 +105,7 @@ bool handle_set_name(const char *name)
 
 	uart_write_str("SNAME: ");
 	uart_write_str((const char*)cfg_system.name);
-	uart_write_str("\r\n");
+	uart_write_crlf();
 
     return true;
 }
@@ -115,7 +115,7 @@ void autocommit(void)
 	if (cfg_system.autocommit) {
 		commit_output();
 	} else {
-		uart_write_str("OFF\r\n");
+		uart_write_str("OFF" CRLF);
 	}
 }
 
@@ -132,7 +132,7 @@ bool set_output(const char *s)
 	} else if (s[0] == '1') {
 		cfg_system.output = 1;
 #ifdef VERBOSE
-		uart_write_str("ON\r\n");
+		uart_write_str("ON" CRLF);
 #endif
 	} else {
         return false;
@@ -196,13 +196,13 @@ bool set_autocommit(const char *arg)
 	if (strcmp(arg, "1") == 0 || strcmp(arg, "YES") == 0) {
 		cfg_system.autocommit = 1;
 #ifdef VERBOSE
-		uart_write_str("YES\r\n");
+		uart_write_str("YES" CRLF);
 #endif
         return true;
 	} else if (strcmp(arg, "0") == 0 || strcmp(arg, "NO") == 0) {
 		cfg_system.autocommit = 0;
 #ifdef VERBOSE
-		uart_write_str("NO\r\n");
+		uart_write_str("NO" CRLF);
 #endif
         return true;
 	} else {
@@ -236,7 +236,7 @@ void write_str(const char *prefix, const char *val)
 {
 	uart_write_str(prefix);
 	uart_write_str(val);
-	uart_write_str("\r\n");
+	uart_write_crlf();
 }
 
 void write_onoff(const char *prefix, uint8_t on)
@@ -248,14 +248,14 @@ void write_millivalue(const char *prefix, uint16_t millival)
 {
 	uart_write_str(prefix);
 	uart_write_millivalue(millival);
-	uart_write_str("\r\n");
+	uart_write_crlf();
 }
 
 void write_centivalue(const char *prefix, uint16_t centival)
 {
 	uart_write_str(prefix);
 	uart_write_centivalue(centival);
-	uart_write_str("\r\n");
+	uart_write_crlf();
 }
 
 void write_raw_millivalue(const char *prefix, uint16_t millival, uint16_t rawval)
@@ -264,7 +264,7 @@ void write_raw_millivalue(const char *prefix, uint16_t millival, uint16_t rawval
 	uart_write_millivalue(millival);
 	uart_write_ch(' ');
 	uart_write_int(rawval);
-	uart_write_str("\r\n");
+	uart_write_crlf();
 }
 
 
@@ -275,7 +275,7 @@ void write_raw_centivalue(const char *prefix, uint16_t centival, uint16_t rawval
 	uart_write_centivalue(centival);
 	uart_write_ch(' ');
 	uart_write_int(rawval);
-	uart_write_str("\r\n");
+	uart_write_crlf();
 }
 
 
@@ -283,13 +283,13 @@ void write_int(const char *prefix, uint16_t val)
 {
 	uart_write_str(prefix);
 	uart_write_int(val);
-	uart_write_str("\r\n");
+	uart_write_crlf();
 }
 
 //  command handlers
 bool handle_system(const char *arg)
 {
-    uart_write_str("M: " MODEL "\r\n" "V: " FW_VERSION "\r\n");
+    uart_write_str("M: " MODEL CRLF "V: " FW_VERSION CRLF);
     write_str("N: ", (const char*)cfg_system.name);
     write_onoff("O: ", cfg_system.default_on);
     write_onoff("AC: ", cfg_system.autocommit);
@@ -297,11 +297,10 @@ bool handle_system(const char *arg)
 }
 bool handle_calibration_dump(const char *arg)
 {
-    write_calibration(&cfg_system.vin_adc  OPTIONALARG("VIN ADC"));
+    write_calibration(&cfg_system.vin_adc  OPTIONALARG("VIN  ADC"));
     write_calibration(&cfg_system.vout_adc OPTIONALARG("VOUT ADC"));
     write_calibration(&cfg_system.cout_adc OPTIONALARG("COUT ADC"));
     write_calibration(&cfg_system.vout_pwm OPTIONALARG("VOUT PWM"));
-    write_calibration(&cfg_system.cout_pwm OPTIONALARG("COUT PWM"));
     return true;
 }
 bool handle_limit_dump(const char *arg)
@@ -356,7 +355,7 @@ bool handle_factory(const char *arg)
 #ifdef DEBUG
 bool handle_stuck(const char *arg)
 {
-    uart_write_str("STUCK\r\n");
+    uart_write_str("STUCK" CRLF);
     uart_write_flush();
     while(1); // Induce watchdog reset
     return true;
@@ -421,7 +420,7 @@ struct calcommand calibrationhandlers[] = {
     { "VOUTADC", 7, &cfg_system.vout_adc, OPTIONAL("configure Vout adc -> volt parameters") },
     { "VOUTPWM", 7, &cfg_system.vout_pwm, OPTIONAL("configure Vout pwm -> volt parameters") },
     { "COUTADC", 7, &cfg_system.cout_adc, OPTIONAL("configure Cout adc -> ampere parameters") },
-    { "COUTPWM", 7, &cfg_system.cout_pwm, OPTIONAL("configure Cout pwm -> ampere parameters") },
+    //{ "COUTPWM", 7, &cfg_system.cout_pwm, OPTIONAL("configure Cout pwm -> ampere parameters") },
 };
 bool handle_command_help(const char*arg)
 {
@@ -432,7 +431,7 @@ bool handle_command_help(const char*arg)
         uart_write_ch('\t');
         uart_write_str(commandhandlers[i].helpmessage);
 #endif
-        uart_write_str("\r\n");
+        uart_write_crlf();
     }
     for (int i = 0 ; i < sizeof(calibrationhandlers)/sizeof(struct calcommand) ; i++)
     {
@@ -442,10 +441,13 @@ bool handle_command_help(const char*arg)
         uart_write_ch('\t');
         uart_write_str(calibrationhandlers[i].helpmessage);
 #endif
-        uart_write_str("\r\n");
+        uart_write_crlf();
     }
     return true;
 }
+
+
+ 
 void process_input()
 {
     bool ok = false;
@@ -475,13 +477,14 @@ void process_input()
         }
     }
     if (ok)
-        uart_write_str("OK\r\n");
+        uart_write_str("OK" CRLF);
     else
-        uart_write_str("E!\r\n");
+        uart_write_str("E!"  CRLF);
 
 	uart_read_len = 0;
 	read_newline = 0;
 }
+
 
 inline void clk_init()
 {
@@ -548,7 +551,7 @@ void read_state(void)
 	if (state.pc3 != tmp) {
 		uart_write_str("PC3 is now ");
 		uart_write_ch('0' + tmp);
-		uart_write_str("\r\n");
+		uart_write_crlf();
 		state.pc3 = tmp;
 	}
 #endif
@@ -568,7 +571,50 @@ void read_state(void)
 				state.cout_raw = val;
 				// Calculation: val * cal_cout_a * 3.3 / 1024 - cal_cout_b
 				state.cout = adc_to_volt(val, &cfg_system.cout_adc);
-				ch = 3;
+				ch = (state.adc_counter--) ? 2 : 3;	//Repeat Cout ADC test until counter expires and we move on to Vout test
+				/* Closed loop feedback to adjust Current PWM based on results of last
+				 * adc result. If in CC mode measured current is less than CC target then increment PWM pulse
+				 * If in CV mode current drops, then decrement pulse. 
+				 * Should cause constant current to converge onto its target without any PWM calibration.
+				 * This fits closer to the observed behaviour of the stock firmware where the pulse
+				 * width narrows in CV mode and expands in CC node/
+				 * If PWM pulse is too wide MOSFET is on for longer and current is wasted.
+				 *  */
+
+				adc_init();		// All ADC readings get screwed up without this. Dunno why? Loop timing issue?
+				uint16_t ccr1H = TIM1_CCR1H;
+				uint16_t ccr1 = TIM1_CCR1L | (ccr1H<<8);
+				
+				//Increase PWM pulse if current less than limit and we are in CC mode
+				if ( state.constant_current && state.cout < cfg_output.cset ) {
+					//ccr1 = ( state.cout+256 < cfg_output.cset ) ? ccr1 + 12 : ccr1 + 3;		// Fast up
+					uint16_t tmp = cfg_output.cset - state.cout;		//Distance to target current
+					ccr1 += (tmp/32)+1;		//Upspeed proportional to distance between current and target
+				}
+				
+				
+				//Reduce PWM pulse if in CV mode current is well below max. 
+				// (Resolution of PWM counter is about 15mA)
+				//if ( (state.cout > cfg_output.cset+10 || ( !state.constant_current && state.cout + 512 < cfg_output.cset)) && ccr1 >= 1) {
+				if ( ( !state.constant_current && state.cout + 512 < cfg_output.cset) && ccr1 >= 1) {
+					ccr1 -= 1;
+				}
+				
+				// Halve PWM pulse if open circuit (rapid down)
+				if ( state.cout == 0 ) {
+					ccr1 = ccr1 >> 1;
+				}
+				
+				
+				// Reduce PWM pulse if in CC mode and current is above target
+				if ( state.cout > cfg_output.cset+10 ) {
+					uint16_t tmp = state.cout - (cfg_output.cset+10);		//Distance to target current
+					ccr1 = (ccr1 > tmp/32 ) ? ccr1 - (tmp/32)-1 : 0;	//Down speed proportional to distance between current and target
+				} 
+
+				TIM1_CCR1H = ccr1>>8;
+				TIM1_CCR1L = ccr1 & 0xFF;
+				
 				break;
 			case 3:
 				state.vout_raw = val;
@@ -593,13 +639,13 @@ void ensure_afr0_set(void)
 	if ((OPT2 & 1) == 0) {
 		uart_flush_writes();
 		if (eeprom_set_afr0()) {
-			uart_write_str("reboot\r\n");
+			uart_write_str("reboot" CRLF);
 			uart_flush_writes();
 			iwatchdog_init();
 			while (1); // Force a reset in a few msec
 		}
 		else {
-			uart_write_str("E!\r\n");
+			uart_write_str("E!" CRLF);
 		}
 	}
 }
@@ -608,7 +654,7 @@ int main()
 {
 	unsigned long i = 0;
 	button_t button = BUTTON_NONE;
-
+	state.adc_counter = 8;		// Initialise count of Cout ADC samples
 	pinout_init();
 	clk_init();
 	uart_init();
@@ -617,7 +663,7 @@ int main()
 
 	config_load();
 
-	uart_write_str("\r\n" MODEL " V:" FW_VERSION "\r\n");
+	uart_write_str(CRLF MODEL " V:" FW_VERSION CRLF);
 
 	ensure_afr0_set();
 

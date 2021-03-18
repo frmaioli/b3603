@@ -25,6 +25,7 @@ extern uint8_t read_newline;
 void uart_init(void);
 void uart_write_ch(const char ch);
 void uart_write_str(const char *str);
+void uart_write_crlf();
 void uart_write_int(uint16_t val);
 void uart_write_int32(uint32_t val);
 void uart_write_fixed_point(uint32_t val);

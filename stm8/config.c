@@ -51,7 +51,7 @@ cfg_system_t default_cfg_system = {
 	.vout_pwm = { .a = FLOAT_TO_FIXED(0.0180774), .b = FLOAT_TO_FIXED(11.578) },
 
 	.cout_adc = { .a = FLOAT_TO_FIXED(3.3*1.25/8.0), .b = FLOAT_TO_FIXED(200) },   // seems already ok.
-	.cout_pwm = { .a = FLOAT_TO_FIXED(8*0.8/3.3), .b = FLOAT_TO_FIXED(160) },      // still needs tuning.
+	// cout_pwm = { .a = FLOAT_TO_FIXED(8*0.8/3.3), .b = FLOAT_TO_FIXED(160) },   // Not needed for closed loop Cout control
 };
 
 cfg_output_t default_cfg_output = {
@@ -72,8 +72,7 @@ INLINE void validate_system_config(cfg_system_t *sys)
 			sys->vin_adc.a == 0 ||
 			sys->vout_adc.a == 0 ||
 			sys->cout_adc.a == 0 ||
-			sys->vout_pwm.a == 0 ||
-			sys->cout_pwm.a == 0
+			sys->vout_pwm.a == 0
 			)
 	{
 		config_default_system(sys);

@@ -48,7 +48,7 @@ typedef struct {
 	calibrate_t cout_adc;
 
 	calibrate_t vout_pwm;
-	calibrate_t cout_pwm;
+	//calibrate_t cout_pwm;
 } cfg_system_t;
 
 typedef struct {
@@ -59,6 +59,7 @@ typedef struct {
 	uint16_t vout; // cV --centiVolts
 	uint16_t cout; // mA
 	uint8_t constant_current; // If false, we are in constant voltage
+	uint8_t adc_counter; //Count of how many Cout samples before Vout is sampled
 #if DEBUG
 	uint8_t pc3;
 #endif

@@ -1,6 +1,8 @@
 #ifndef MAIN_H
 #define MAIN_H
 
+#define CRLF	"\r\n"	//Use   \n or  \r\n 
+
 #include "display.h"
 #include <stdint.h>
 #include <stdbool.h>
