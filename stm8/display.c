@@ -110,8 +110,7 @@ uint8_t display_char(uint8_t ch, uint8_t dot)
 {
 	if (dot)
 		dot = 1;
-	//if (ch >= 0 && ch <= NALFA)
-		if ( ch <= NALFA)
+	if (ch <= NALFA)
 		return num_code[ch] | dot;
 	return dot;
 }
@@ -122,13 +121,15 @@ void display_smart_digits(uint16_t disp_value, uint8_t *pending_display_p, uint8
 	uint8_t ch = 0;
 	uint8_t dot = 0;
 	uint8_t i = 0, c = 0;
+
+    disp_value *= units ? 10 : 1; //transform to milli, if centi
 	
 	//Display the number, with the dot changing position when skipping not significant zero
 	for (i = 0; i < 4; i++) {
 		ch = (disp_value/divisor[i])%10;
-		//Ignore zero or less (3th after dot) significant digit
+		//Ignore zero or less (3rd after dot) significant digit
 		if ((i == 0 && ch == 0)||(c > 2)) continue;
-		if (i == units+1) dot = 1;		//Decimal position defined by parameter units 0= milli , 1 = centi
+		if (i == 1) dot = 1;
 		*(pending_display_p - c++) = display_char(ch, dot);
 		dot = 0;
 	}

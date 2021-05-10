@@ -127,7 +127,7 @@ bool set_output(const char *s)
 	if (s[0] == '0') {
 		cfg_system.output = 0;
 #ifdef VERBOSE
-		uart_write_str("OFF\r\n");
+		uart_write_str("OFF" CRLF);
 #endif
 	} else if (s[0] == '1') {
 		cfg_system.output = 1;
@@ -151,7 +151,7 @@ bool set_voltage(uint16_t voltage)
 	if (val == 0xFFFF)
 		return false;
 
-	if ((val > CAP_VMAX) || (val < CAP_VMIN)) {
+	if ((val > CAP_VMAX) || (val < CAP_VMIN) || (val >= (state.vin - CAP_VDIFF))) {
 		return false;
 	}
 
@@ -301,6 +301,7 @@ bool handle_calibration_dump(const char *arg)
     write_calibration(&cfg_system.vout_adc OPTIONALARG("VOUT ADC"));
     write_calibration(&cfg_system.cout_adc OPTIONALARG("COUT ADC"));
     write_calibration(&cfg_system.vout_pwm OPTIONALARG("VOUT PWM"));
+    write_calibration(&cfg_system.cout_pwm OPTIONALARG("COUT PWM"));
     return true;
 }
 bool handle_limit_dump(const char *arg)
@@ -420,7 +421,7 @@ struct calcommand calibrationhandlers[] = {
     { "VOUTADC", 7, &cfg_system.vout_adc, OPTIONAL("configure Vout adc -> volt parameters") },
     { "VOUTPWM", 7, &cfg_system.vout_pwm, OPTIONAL("configure Vout pwm -> volt parameters") },
     { "COUTADC", 7, &cfg_system.cout_adc, OPTIONAL("configure Cout adc -> ampere parameters") },
-    //{ "COUTPWM", 7, &cfg_system.cout_pwm, OPTIONAL("configure Cout pwm -> ampere parameters") },
+    { "COUTPWM", 7, &cfg_system.cout_pwm, OPTIONAL("configure Cout pwm -> ampere parameters") },
 };
 bool handle_command_help(const char*arg)
 {
@@ -571,50 +572,7 @@ void read_state(void)
 				state.cout_raw = val;
 				// Calculation: val * cal_cout_a * 3.3 / 1024 - cal_cout_b
 				state.cout = adc_to_volt(val, &cfg_system.cout_adc);
-				ch = (state.adc_counter--) ? 2 : 3;	//Repeat Cout ADC test until counter expires and we move on to Vout test
-				/* Closed loop feedback to adjust Current PWM based on results of last
-				 * adc result. If in CC mode measured current is less than CC target then increment PWM pulse
-				 * If in CV mode current drops, then decrement pulse. 
-				 * Should cause constant current to converge onto its target without any PWM calibration.
-				 * This fits closer to the observed behaviour of the stock firmware where the pulse
-				 * width narrows in CV mode and expands in CC node/
-				 * If PWM pulse is too wide MOSFET is on for longer and current is wasted.
-				 *  */
-
-				adc_init();		// All ADC readings get screwed up without this. Dunno why? Loop timing issue?
-				uint16_t ccr1H = TIM1_CCR1H;
-				uint16_t ccr1 = TIM1_CCR1L | (ccr1H<<8);
-				
-				//Increase PWM pulse if current less than limit and we are in CC mode
-				if ( state.constant_current && state.cout < cfg_output.cset ) {
-					//ccr1 = ( state.cout+256 < cfg_output.cset ) ? ccr1 + 12 : ccr1 + 3;		// Fast up
-					uint16_t tmp = cfg_output.cset - state.cout;		//Distance to target current
-					ccr1 += (tmp/32)+1;		//Upspeed proportional to distance between current and target
-				}
-				
-				
-				//Reduce PWM pulse if in CV mode current is well below max. 
-				// (Resolution of PWM counter is about 15mA)
-				//if ( (state.cout > cfg_output.cset+10 || ( !state.constant_current && state.cout + 512 < cfg_output.cset)) && ccr1 >= 1) {
-				if ( ( !state.constant_current && state.cout + 512 < cfg_output.cset) && ccr1 >= 1) {
-					ccr1 -= 1;
-				}
-				
-				// Halve PWM pulse if open circuit (rapid down)
-				if ( state.cout == 0 ) {
-					ccr1 = ccr1 >> 1;
-				}
-				
-				
-				// Reduce PWM pulse if in CC mode and current is above target
-				if ( state.cout > cfg_output.cset+10 ) {
-					uint16_t tmp = state.cout - (cfg_output.cset+10);		//Distance to target current
-					ccr1 = (ccr1 > tmp/32 ) ? ccr1 - (tmp/32)-1 : 0;	//Down speed proportional to distance between current and target
-				} 
-
-				TIM1_CCR1H = ccr1>>8;
-				TIM1_CCR1L = ccr1 & 0xFF;
-				
+				ch = 3;
 				break;
 			case 3:
 				state.vout_raw = val;
@@ -654,7 +612,6 @@ int main()
 {
 	unsigned long i = 0;
 	button_t button = BUTTON_NONE;
-	state.adc_counter = 8;		// Initialise count of Cout ADC samples
 	pinout_init();
 	clk_init();
 	uart_init();

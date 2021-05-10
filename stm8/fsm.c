@@ -39,10 +39,11 @@ void fsm_event_update(fsm_event_t *evt, button_t button, cfg_system_t *sys)
 	evt->st.is_output = sys->output;
 }
 
-void change_control(fsm_event_t *event, bool(*set)(uint16_t), uint16_t val, uint8_t reset)
+static const uint8_t aux[2] = {10, 1};
+void change_control(fsm_event_t *event, bool(*set)(uint16_t), uint16_t val, uint8_t reset, bool centi)
 {
 	static uint16_t count = 0;
-	uint8_t increment = 10;
+	uint8_t increment = aux[centi];
 
 	if (reset) {
 		count = 0;
@@ -57,8 +58,8 @@ void change_control(fsm_event_t *event, bool(*set)(uint16_t), uint16_t val, uint
 
 	//Test if the number is like 32.1 or 3.21 and make a logic to increment the last digit
 	//But only for first touch (count = 1). Keep the same running speed for the rest
-	if (((val/10000)%10) && (count == 1))
-		increment = 100;
+	if (((val/(1000*aux[centi]))%10) && (count == 1))
+		increment = 10*aux[centi];
 
 	if (event->st.is_button_up) val += increment;
 	if (event->st.is_button_down) val -= increment;
@@ -149,21 +150,21 @@ void process_fsm(button_t button, cfg_system_t *sys, cfg_output_t *cfg, state_t 
 			//Second test is to switch quickly when a button is pressed, but after it can update slower 
 			display_vout((sys->output && !latch_cfg) ? stt->vout : cfg->vset,
 					(Fsm_state == Fsm_state_chain) ? UPDATE_SLOW : UPDATE_FAST);
-			change_control(NULL, NULL, 0, 1);
+			change_control(NULL, NULL, 0, 1, 1);
 			break;
 		case FSM_DISP_IOUT:
 			if (latch_cfg) latch_cfg--;
 			display_iout((sys->output && !latch_cfg) ? stt->cout : cfg->cset,
 					(Fsm_state == Fsm_state_chain) ? UPDATE_SLOW : UPDATE_FAST);
-			change_control(NULL, NULL, 0, 1);
+			change_control(NULL, NULL, 0, 1, 0);
 			break;
 		case FSM_VOUT_CHANGE:
-			change_control(&event, set_voltage, cfg->vset, 0);
+			change_control(&event, set_voltage, cfg->vset, 0, 1);
 			display_vout(cfg->vset, UPDATE_FAST);
 			latch_cfg = TIMER;
 			break;
 		case FSM_IOUT_CHANGE:
-			change_control(&event, set_current, cfg->cset, 0);
+			change_control(&event, set_current, cfg->cset, 0, 0);
 			display_iout(cfg->cset, UPDATE_FAST);
 			latch_cfg = TIMER;
 			break;

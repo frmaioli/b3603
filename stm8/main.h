@@ -17,6 +17,7 @@
 #define CAP_VMIN 1 // 0.01V --centiVolts
 #define CAP_VMAX 3500 // 35 V --centiVolts
 #define CAP_VSTEP 1 // 0.01V --centiVolts
+#define CAP_VDIFF 150 // 1.5V --centiVolts (vout must be lower than vin-vdiff)
 
 #define CAP_CMIN 1 // 1 mA
 #define CAP_CMAX 3000 // 3 A

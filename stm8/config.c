@@ -47,11 +47,11 @@ cfg_system_t default_cfg_system = {
     // volt = adcvalue * cal.a - cal.b
 
 	.vin_adc = { .a = FLOAT_TO_FIXED(0.649151), .b = 0 /* -FLOAT_TO_FIXED(9.77583) */ },   // problem : need negative number here.
-	.vout_adc = { .a = FLOAT_TO_FIXED(0.554031), .b = FLOAT_TO_FIXED(59.4432) },
-	.vout_pwm = { .a = FLOAT_TO_FIXED(0.0180774), .b = FLOAT_TO_FIXED(11.578) },
+	.vout_adc = { .a = FLOAT_TO_FIXED(0.5536), .b = FLOAT_TO_FIXED(56.3560) },
+	.vout_pwm = { .a = FLOAT_TO_FIXED(1.8109), .b = FLOAT_TO_FIXED(107.5395) },
 
-	.cout_adc = { .a = FLOAT_TO_FIXED(3.3*1.25/8.0), .b = FLOAT_TO_FIXED(200) },   // seems already ok.
-	// cout_pwm = { .a = FLOAT_TO_FIXED(8*0.8/3.3), .b = FLOAT_TO_FIXED(160) },   // Not needed for closed loop Cout control
+	.cout_adc = { .a = FLOAT_TO_FIXED(0.4935), .b = FLOAT_TO_FIXED(177) },
+	.cout_pwm = { .a = FLOAT_TO_FIXED(2.0276), .b = FLOAT_TO_FIXED(369.8418) }, 
 };
 
 cfg_output_t default_cfg_output = {
